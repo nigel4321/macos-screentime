@@ -17,11 +17,27 @@ let package = Package(
     platforms: [
         .macOS(.v14)
     ],
-    products: [],
+    products: [
+        .library(name: "PolicyEngine", targets: ["PolicyEngine"])
+    ],
     dependencies: [
         // SwiftLint is attached per-target as a build-tool plugin so every
         // `swift build` / `swift test` lints. See §1.3+ targets.
         .package(url: "https://github.com/realm/SwiftLint", from: "0.55.0")
     ],
-    targets: []
+    targets: [
+        .target(
+            name: "PolicyEngine",
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+            ]
+        ),
+        .testTarget(
+            name: "PolicyEngineTests",
+            dependencies: ["PolicyEngine"],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+            ]
+        )
+    ]
 )

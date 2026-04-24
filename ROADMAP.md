@@ -36,13 +36,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] Verify lint fails a deliberately bad commit *(mac-only — requires `swift build` with the plugin, and the first target to exist)*
 
 ### 1.3 PolicyEngine — scaffolding
-- [ ] Add `PolicyEngine` product to `Core` package
-- [ ] Define `BundleID` value type
-- [ ] Define `UsageEvent` struct (bundleId, start, end)
-- [ ] Define `Policy` struct with nested `AppLimit`, `DowntimeWindow`
-- [ ] Define `EnforcementAction` enum (`shield`, `clear`)
-- [ ] Define `PolicyVersion` type
-- [ ] Add `PolicyEngineTests` target
+- [x] Add `PolicyEngine` product to `Core` package
+- [x] Define `BundleID` value type
+- [x] Define `UsageEvent` struct (bundleId, start, end)
+- [x] Define `Policy` struct with nested `AppLimit`, `DowntimeWindow`
+- [x] Define `EnforcementAction` enum (`shield`, `clear`)
+- [x] Define `PolicyVersion` type
+- [x] Add `PolicyEngineTests` target
 
 ### 1.4 PolicyEngine — no-policy case (TDD)
 - [ ] RED: `evaluate` returns empty actions when policy is nil
