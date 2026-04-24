@@ -1,0 +1,86 @@
+# ---------- OS ----------
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+desktop.ini
+
+# ---------- Editors / IDEs ----------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.fleet/
+.zed/
+
+# ---------- Swift / Xcode ----------
+# Build
+mac-agent/**/build/
+mac-agent/**/DerivedData/
+mac-agent/**/.build/
+
+# Xcode user data
+**/xcuserdata/
+**/*.xcuserstate
+**/*.xcscheme
+!**/xcshareddata/**/*.xcscheme
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# CocoaPods (not planned, but guard anyway)
+Pods/
+*.xcworkspace/xcuserdata/
+
+# Carthage (not planned, but guard anyway)
+Carthage/Build/
+
+# fastlane (Mac)
+mac-agent/**/fastlane/report.xml
+mac-agent/**/fastlane/Preview.html
+mac-agent/**/fastlane/screenshots/**/*.png
+mac-agent/**/fastlane/test_output
+
+# ---------- Kotlin / Android / Gradle ----------
+android-app/**/.gradle/
+android-app/**/build/
+android-app/**/local.properties
+android-app/**/captures/
+android-app/**/.externalNativeBuild/
+android-app/**/.cxx/
+android-app/**/*.iml
+android-app/**/gradle-app.setting
+!android-app/**/gradle-wrapper.jar
+
+# Keystores + signing secrets
+android-app/**/*.jks
+android-app/**/*.keystore
+android-app/**/keystore.properties
+android-app/**/google-services.json
+android-app/**/fastlane/report.xml
+android-app/**/fastlane/Preview.html
+android-app/**/fastlane/test_output
+
+# ---------- Go (backend) ----------
+backend/bin/
+backend/dist/
+backend/vendor/
+backend/coverage.out
+backend/*.test
+backend/*.out
+
+# ---------- Secrets / env ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.mobileprovision
+
+# ---------- Tooling output ----------
+*.log
+tmp/
+.cache/
+coverage/
