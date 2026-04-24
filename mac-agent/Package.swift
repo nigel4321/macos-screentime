@@ -18,6 +18,10 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [],
-    dependencies: [],
+    dependencies: [
+        // SwiftLint is attached per-target as a build-tool plugin so every
+        // `swift build` / `swift test` lints. See §1.3+ targets.
+        .package(url: "https://github.com/realm/SwiftLint", from: "0.55.0")
+    ],
     targets: []
 )

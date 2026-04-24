@@ -30,10 +30,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Decide `.xcodeproj` tracking policy — tracked; user state excluded via root `.gitignore` (documented in `mac-agent/README.md`)
 
 ### 1.2 SwiftLint
-- [ ] Add SwiftLint as a Swift Package plugin
-- [ ] Add `.swiftlint.yml` with chosen rule set
-- [ ] Add build-phase script to run SwiftLint on every build
-- [ ] Verify lint fails a deliberately bad commit
+- [x] Add SwiftLint as a Swift Package plugin *(dependency added to `Package.swift`; attached per-target in §1.3+)*
+- [x] Add `.swiftlint.yml` with chosen rule set
+- [ ] Add build-phase script to run SwiftLint on every build *(mac-only — Xcode build phase; SPM plugin covers non-Xcode builds)*
+- [ ] Verify lint fails a deliberately bad commit *(mac-only — requires `swift build` with the plugin, and the first target to exist)*
 
 ### 1.3 PolicyEngine — scaffolding
 - [ ] Add `PolicyEngine` product to `Core` package
