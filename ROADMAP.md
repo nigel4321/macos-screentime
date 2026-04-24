@@ -19,15 +19,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 ## Milestone 1 — Observe-only Mac agent
 
 ### 1.1 Xcode project setup
-- [ ] Create `mac-agent/` directory
-- [ ] Create Xcode workspace `MacAgent.xcworkspace`
-- [ ] Create app target `MacAgent` (SwiftUI, macOS)
-- [ ] Set deployment target to macOS 14.0
-- [ ] Set Swift language version to 5.9
-- [ ] Create `Core/` Swift Package with `Package.swift`
-- [ ] Add `Core` package as a local dependency of the app target
-- [ ] Configure local development code signing
-- [ ] Decide whether to track `.xcodeproj` and document in CONTRIBUTING
+- [x] Create `mac-agent/` directory
+- [ ] Create Xcode workspace `MacAgent.xcworkspace` *(mac-only)*
+- [ ] Create app target `MacAgent` (SwiftUI, macOS) *(mac-only)*
+- [x] Set deployment target to macOS 14.0 *(in `Package.swift`)*
+- [x] Set Swift language version to 5.9 *(`swift-tools-version:5.9`)*
+- [x] Create Swift Package with `Package.swift` at `mac-agent/Package.swift`
+- [ ] Add package as a local dependency of the app target *(mac-only, after app target exists)*
+- [ ] Configure local development code signing *(mac-only)*
+- [x] Decide `.xcodeproj` tracking policy — tracked; user state excluded via root `.gitignore` (documented in `mac-agent/README.md`)
 
 ### 1.2 SwiftLint
 - [ ] Add SwiftLint as a Swift Package plugin
