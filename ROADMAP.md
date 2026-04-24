@@ -44,13 +44,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Define `PolicyVersion` type
 - [x] Add `PolicyEngineTests` target
 
-### 1.4 PolicyEngine — no-policy case (TDD)
+> **Sub-sections §1.4 – §1.10 require a macOS environment** to exercise meaningfully (TDD cycles need `swift test`; SwiftUI / AppKit code requires the macOS SDK). They are left unticked and will be resumed on the Mac.
+
+### 1.4 PolicyEngine — no-policy case (TDD) *(awaits macOS)*
 - [ ] RED: `evaluate` returns empty actions when policy is nil
 - [ ] GREEN: minimal `evaluate` implementation
 - [ ] RED: `evaluate` returns empty when policy has no rules
 - [ ] GREEN: extend implementation
 
-### 1.5 PolicyEngine — per-app daily limits (TDD)
+### 1.5 PolicyEngine — per-app daily limits (TDD) *(awaits macOS)*
 - [ ] RED: limit not crossed → no shield
 - [ ] GREEN: accumulate today's usage for bundleId, compare to limit
 - [ ] RED: limit exactly crossed → shield emitted
@@ -59,7 +61,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] RED: multiple apps with independent limits
 - [ ] GREEN: handle N apps
 
-### 1.6 PolicyEngine — downtime windows (TDD)
+### 1.6 PolicyEngine — downtime windows (TDD) *(awaits macOS)*
 - [ ] RED: outside window → no shield
 - [ ] RED: inside window → shield all apps on block list
 - [ ] RED: window crossing midnight
@@ -68,7 +70,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] GREEN: implement window evaluation with injected `Clock` + `TimeZone`
 - [ ] Property test: window-active ⇔ now ∈ [start, end]
 
-### 1.7 LocalStore
+### 1.7 LocalStore *(awaits macOS)*
 - [ ] Add GRDB dependency to `Core`
 - [ ] Add `LocalStore` product
 - [ ] Schema v1 migration: `usage_event`, `policy`
@@ -81,7 +83,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] DAO: read/write current policy
 - [ ] DAO tests with in-memory GRDB
 
-### 1.8 UsageCollector
+### 1.8 UsageCollector *(awaits macOS)*
 - [ ] Add `UsageCollector` product
 - [ ] Abstract `WorkspaceSource` protocol
 - [ ] Real implementation wrapping `NSWorkspace.didActivateApplicationNotification`
@@ -92,14 +94,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] Handle screen lock → close open event
 - [ ] Unit tests for each transition
 
-### 1.9 App wiring
+### 1.9 App wiring *(mac-only)*
 - [ ] Root `MenuBarExtra` scene
 - [ ] Hide Dock icon via `LSUIElement` in Info.plist
 - [ ] Dependency container wiring UsageCollector → LocalStore
 - [ ] Start collection on app launch
 - [ ] Graceful shutdown on quit (flush open event)
 
-### 1.10 Today view
+### 1.10 Today view *(mac-only)*
 - [ ] `TodayViewModel` querying LocalStore for today's aggregated usage
 - [ ] Top-5 apps list UI in the menu popover
 - [ ] Live updates as events land
@@ -107,12 +109,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] First-launch onboarding screen (observe-only copy)
 
 ### 1.11 CI
-- [ ] `.github/workflows/mac.yml` on `macos-14`
-- [ ] Run SwiftLint
-- [ ] Run `xcodebuild test` for all Core test targets
-- [ ] Cache derived data / SPM packages
-- [ ] Status badge in README
-- [ ] Green build on `main`
+- [x] `.github/workflows/mac.yml` on `macos-14`
+- [x] Run SwiftLint *(via SPM build-tool plugin during `swift build`)*
+- [ ] Run `xcodebuild test` for all Core test targets *(mac-only — requires Xcode app target from §1.1)*
+- [x] Cache SPM packages
+- [x] Status badge in README
+- [ ] Green build on `main` *(awaits first push from a Mac; §1.4+ need verifiable tests first)*
 
 ---
 

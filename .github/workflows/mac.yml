@@ -1,0 +1,57 @@
+name: mac
+
+on:
+  push:
+    paths:
+      - "mac-agent/**"
+      - ".github/workflows/mac.yml"
+  pull_request:
+    paths:
+      - "mac-agent/**"
+      - ".github/workflows/mac.yml"
+
+concurrency:
+  group: mac-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: swift build + test
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: mac-agent
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain versions
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Cache Swift Package Manager artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            mac-agent/.build
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('mac-agent/Package.resolved', 'mac-agent/Package.swift') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      # SwiftLint is attached to each target as a build-tool plugin, so
+      # `swift build` lints as a side effect. A dedicated lint step is
+      # intentionally not used here.
+      - name: swift build
+        run: swift build --configuration debug
+
+      - name: swift test
+        run: swift test --parallel
+
+      # The Xcode app target is added in a later ROADMAP.md sub-section
+      # (mac-only). Once it exists this workflow will gain an
+      # `xcodebuild test` step that runs the app-level schemes in
+      # addition to the library tests above.

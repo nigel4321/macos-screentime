@@ -1,5 +1,8 @@
 # macos-screentime
 
+[![mac](https://github.com/nigel4321/macos-screentime/actions/workflows/mac.yml/badge.svg)](https://github.com/nigel4321/macos-screentime/actions/workflows/mac.yml)
+
+
 A native macOS agent that reads and enforces screen-time restrictions, paired with an Android dashboard for viewing usage and editing policy.
 
 Two clients, one sync backend:
