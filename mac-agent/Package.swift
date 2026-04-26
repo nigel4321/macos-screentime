@@ -18,12 +18,14 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .library(name: "PolicyEngine", targets: ["PolicyEngine"])
+        .library(name: "PolicyEngine", targets: ["PolicyEngine"]),
+        .library(name: "LocalStore", targets: ["LocalStore"])
     ],
     dependencies: [
         // SwiftLint is attached per-target as a build-tool plugin so every
         // `swift build` / `swift test` lints. See §1.3+ targets.
-        .package(url: "https://github.com/realm/SwiftLint", from: "0.55.0")
+        .package(url: "https://github.com/realm/SwiftLint", from: "0.55.0"),
+        .package(url: "https://github.com/groue/GRDB.swift", from: "6.0.0")
     ],
     targets: [
         .target(
@@ -35,6 +37,23 @@ let package = Package(
         .testTarget(
             name: "PolicyEngineTests",
             dependencies: ["PolicyEngine"],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+            ]
+        ),
+        .target(
+            name: "LocalStore",
+            dependencies: [
+                "PolicyEngine",
+                .product(name: "GRDB", package: "GRDB.swift")
+            ],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+            ]
+        ),
+        .testTarget(
+            name: "LocalStoreTests",
+            dependencies: ["LocalStore", "PolicyEngine"],
             plugins: [
                 .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
             ]

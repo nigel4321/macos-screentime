@@ -70,18 +70,18 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] GREEN: implement window evaluation with injected `Clock` + `TimeZone`
 - [x] Property test: window-active ⇔ now ∈ [start, end]
 
-### 1.7 LocalStore *(awaits macOS)*
-- [ ] Add GRDB dependency to `Core`
-- [ ] Add `LocalStore` product
-- [ ] Schema v1 migration: `usage_event`, `policy`
-- [ ] Migration runner with version tracking
-- [ ] Migration test: fresh DB → v1
-- [ ] Migration test: re-run is idempotent
-- [ ] DAO: insert usage event (idempotent on client id)
-- [ ] DAO: query unsynced events
-- [ ] DAO: mark events synced
-- [ ] DAO: read/write current policy
-- [ ] DAO tests with in-memory GRDB
+### 1.7 LocalStore
+- [x] Add GRDB dependency to `Core`
+- [x] Add `LocalStore` product
+- [x] Schema v1 migration: `usage_event`, `policy`
+- [x] Migration runner with version tracking
+- [x] Migration test: fresh DB → v1
+- [x] Migration test: re-run is idempotent
+- [x] DAO: insert usage event (idempotent on client id)
+- [x] DAO: query unsynced events
+- [x] DAO: mark events synced
+- [x] DAO: read/write current policy
+- [x] DAO tests with in-memory GRDB
 
 ### 1.8 UsageCollector *(awaits macOS)*
 - [ ] Add `UsageCollector` product
