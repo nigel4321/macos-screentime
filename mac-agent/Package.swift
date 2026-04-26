@@ -24,22 +24,24 @@ let package = Package(
     ],
     dependencies: [
         // SwiftLint is attached per-target as a build-tool plugin so every
-        // `swift build` / `swift test` lints. See §1.3+ targets.
-        .package(url: "https://github.com/realm/SwiftLint", from: "0.55.0"),
+        // `swift build` / `swift test` lints. We use SwiftLintPlugins (binary
+        // distribution) instead of realm/SwiftLint directly because Swift 6
+        // forbids prebuild commands from using executables built from source.
+        .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.57.0"),
         .package(url: "https://github.com/groue/GRDB.swift", from: "6.0.0")
     ],
     targets: [
         .target(
             name: "PolicyEngine",
             plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]
         ),
         .testTarget(
             name: "PolicyEngineTests",
             dependencies: ["PolicyEngine"],
             plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]
         ),
         .target(
@@ -49,28 +51,28 @@ let package = Package(
                 .product(name: "GRDB", package: "GRDB.swift")
             ],
             plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]
         ),
         .testTarget(
             name: "LocalStoreTests",
             dependencies: ["LocalStore", "PolicyEngine"],
             plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]
         ),
         .target(
             name: "UsageCollector",
             dependencies: ["PolicyEngine"],
             plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]
         ),
         .testTarget(
             name: "UsageCollectorTests",
             dependencies: ["UsageCollector", "PolicyEngine"],
             plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]
         )
     ]
