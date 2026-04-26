@@ -121,15 +121,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 ## Milestone 2 — Backend + Android read-only
 
 ### 2.1 Backend: module scaffolding
-- [ ] Init `backend/` Go module
-- [ ] Layout: `cmd/server`, `internal/{api,db,auth,model}`, `migrations`
-- [ ] HTTP server with chi router
-- [ ] `/healthz` endpoint
-- [ ] Env-var config loader
-- [ ] Structured logging via `log/slog`
-- [ ] Graceful shutdown on SIGTERM
-- [ ] `golangci-lint` config
-- [ ] `Makefile` with run/test/lint targets
+- [x] Init `backend/` Go module
+- [x] Layout: `cmd/server`, `internal/{api,db,auth,model}`, `migrations`
+- [x] HTTP server with chi router
+- [x] `/healthz` endpoint
+- [x] Env-var config loader
+- [x] Structured logging via `log/slog`
+- [x] Graceful shutdown on SIGTERM
+- [x] `golangci-lint` config
+- [x] `Makefile` with run/test/lint targets
 
 ### 2.2 Backend: Postgres + migrations
 - [ ] Choose migration tool (goose)
