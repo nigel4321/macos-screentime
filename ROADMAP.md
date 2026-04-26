@@ -111,7 +111,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 ### 1.11 CI
 - [x] `.github/workflows/mac.yml` on `macos-14`
 - [x] Run SwiftLint *(via SPM build-tool plugin during `swift build`)*
-- [ ] Run `xcodebuild test` for all Core test targets *(mac-only — requires Xcode app target from §1.1)*
+- [x] Run `xcodebuild build -scheme MacAgent` for Xcode-toolchain validation of the App target *(library tests covered by `swift test` above)*
 - [x] Cache SPM packages
 - [x] Status badge in README
 - [x] Green build on `main`

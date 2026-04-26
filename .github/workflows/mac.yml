@@ -51,7 +51,21 @@ jobs:
       - name: swift test
         run: swift test --parallel
 
-      # The Xcode app target is added in a later ROADMAP.md sub-section
-      # (mac-only). Once it exists this workflow will gain an
-      # `xcodebuild test` step that runs the app-level schemes in
-      # addition to the library tests above.
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: mac-agent/App
+        run: xcodegen generate --spec project.yml
+
+      - name: xcodebuild build (MacAgent app target)
+        working-directory: mac-agent/App
+        run: |
+          xcodebuild build \
+            -project MacAgent.xcodeproj \
+            -scheme MacAgent \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO
