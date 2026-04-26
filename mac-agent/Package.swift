@@ -19,7 +19,8 @@ let package = Package(
     ],
     products: [
         .library(name: "PolicyEngine", targets: ["PolicyEngine"]),
-        .library(name: "LocalStore", targets: ["LocalStore"])
+        .library(name: "LocalStore", targets: ["LocalStore"]),
+        .library(name: "UsageCollector", targets: ["UsageCollector"])
     ],
     dependencies: [
         // SwiftLint is attached per-target as a build-tool plugin so every
@@ -54,6 +55,20 @@ let package = Package(
         .testTarget(
             name: "LocalStoreTests",
             dependencies: ["LocalStore", "PolicyEngine"],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+            ]
+        ),
+        .target(
+            name: "UsageCollector",
+            dependencies: ["PolicyEngine"],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
+            ]
+        ),
+        .testTarget(
+            name: "UsageCollectorTests",
+            dependencies: ["UsageCollector", "PolicyEngine"],
             plugins: [
                 .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
             ]

@@ -83,16 +83,16 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] DAO: read/write current policy
 - [x] DAO tests with in-memory GRDB
 
-### 1.8 UsageCollector *(awaits macOS)*
-- [ ] Add `UsageCollector` product
-- [ ] Abstract `WorkspaceSource` protocol
-- [ ] Real implementation wrapping `NSWorkspace.didActivateApplicationNotification`
-- [ ] Fake implementation for tests
-- [ ] Translate activation stream to closed `(bundleId, start, end)` events
-- [ ] Handle system sleep → close open event
-- [ ] Handle system wake → resume on active app
-- [ ] Handle screen lock → close open event
-- [ ] Unit tests for each transition
+### 1.8 UsageCollector
+- [x] Add `UsageCollector` product
+- [x] Abstract `WorkspaceSource` protocol
+- [x] Real implementation wrapping `NSWorkspace.didActivateApplicationNotification`
+- [x] Fake implementation for tests
+- [x] Translate activation stream to closed `(bundleId, start, end)` events
+- [x] Handle system sleep → close open event
+- [x] Handle system wake → resume on active app
+- [x] Handle screen lock → close open event
+- [x] Unit tests for each transition
 
 ### 1.9 App wiring *(mac-only)*
 - [ ] Root `MenuBarExtra` scene
