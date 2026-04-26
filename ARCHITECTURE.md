@@ -112,13 +112,87 @@ The Mac and the phone are rarely on the same network, often not online at the sa
 
 - **Language**: Go 1.22. Chosen for small deployable binary, good HTTP/WebSocket story, fast test suite (matters for TDD cycle time).
 - **Storage**: Postgres 16. `usage_event` is partitioned by month.
-- **Auth**: Sign in with Apple on macOS, Sign in with Google on Android, both exchanged server-side for a backend-issued JWT. One `account` row owns one or more `device` rows.
+- **Auth**: Sign in with Apple on macOS, Sign in with Google on Android, both exchanged server-side for a backend-issued JWT. One `account` row may bind multiple identity providers via an `account_identity` table — the Mac and the phone pair to the same account through a one-time code (see §3.3). One `account` row owns one or more `device` rows.
 - **Hosting**: Fly.io or Railway for Milestone 1 — one region, one Postgres. Migrate to a real cloud only if we outgrow it.
 
-### 3.3 API surface (v1)
+### 3.3 Authentication & account pairing
+
+The Mac signs in with Apple, the Android phone signs in with Google. The two identity providers never share a subject identifier, so the backend separates *account* (the unit usage and policy belong to) from *identity bindings* (how a device proves it owns the account):
+
+- `account` — internal account id, profile metadata
+- `account_identity` — `(account_id, provider, subject_id)`, unique on `(provider, subject_id)`, many-to-one to `account`
+
+Two-tier token model:
+
+1. **Identity** — platform-native ID token (Apple/Google), verified by the backend against the platform's JWKS (cached).
+2. **Authorization** — short-lived backend JWT (~1h) issued after identity exchange. Sent as `Authorization: Bearer …` on every API call. The Mac additionally holds a longer-lived `device_token` from `/v1/devices/register` so the backend can identify *which* Mac on multi-device accounts.
+
+```
+┌─────────────┐                   ┌─────────────┐                   ┌──────────────┐
+│   Mac app   │                   │   Backend   │                   │   Android    │
+│             │                   │  (JWKS, DB) │                   │              │
+└──────┬──────┘                   └──────┬──────┘                   └──────┬───────┘
+       │  Sign in with Apple             │                                 │
+       │  → Apple ID token               │                                 │
+       ├────────────────────────────────►│                                 │
+       │  POST /v1/auth/apple            │                                 │
+       │     {id_token}                  │                                 │
+       │                                 │  verify against Apple JWKS      │
+       │                                 │  upsert account_identity        │
+       │  ◄──── { backend_jwt }          │                                 │
+       │                                 │                                 │
+       │  POST /v1/devices/register      │                                 │
+       │     Auth: Bearer <jwt>          │                                 │
+       │  ◄──── { device_id, device_tok }│                                 │
+       │                                 │                                 │
+       │ Bearer <jwt> for all writes,    │                                 │
+       │ device_tok identifies *which    │                                 │
+       │ Mac* on multi-device accounts   │                                 │
+       │                                 │                                 │
+       │                                 │           Sign in with Google   │
+       │                                 │           POST /v1/auth/google  │
+       │                                 │◄────────────────────────────────┤
+       │                                 │  verify against Google JWKS     │
+       │                                 │  fresh account (unpaired) OR    │
+       │                                 │  resolve to existing via pair   │
+       │                                 │  ────► { backend_jwt } ────────►│
+       │                                 │                                 │
+       │   POST /v1/account:pair-init    │                                 │
+       ├────────────────────────────────►│                                 │
+       │   ◄──── { code: "482917" }      │                                 │
+       │                                 │                                 │
+       │     [user types code on phone]  │                                 │
+       │                                 │                                 │
+       │                                 │  POST /v1/account:pair-complete │
+       │                                 │     { code: "482917" }          │
+       │                                 │◄────────────────────────────────┤
+       │                                 │  merge Google account into the  │
+       │                                 │  Mac's account; move identity   │
+       │                                 │  rows; reissue Android JWT      │
+       │                                 │  ────► { backend_jwt' } ───────►│
+```
+
+Pairing flow:
+
+1. First sign-in on either device creates a fresh `account` plus its first `account_identity` binding.
+2. Mac calls `POST /v1/account:pair-init` and receives a 6-digit code valid for ~10 minutes.
+3. The user reads the code from the Mac and enters it on the phone, which calls `POST /v1/account:pair-complete`. The backend merges the Google-side account into the Apple-side account, moves the Google `account_identity` row over, deletes the now-empty source account, and reissues the Android client a JWT pointing at the merged account.
+4. After pairing the merged account has two `account_identity` rows (Apple + Google). All future writes from either device route to the same `account_id`.
+
+Edge cases worth knowing about:
+
+- **Pre-paired sign-out and back in** — both devices already have `account_identity` rows; sign-in just looks up the row and issues a JWT.
+- **Repairing after a phone reset** — Android signs in with the same Google subject; the existing `account_identity` row routes the user back to the original account without a new pairing flow.
+- **Lost access to one provider** — out of scope for Milestone 2; recovery via account-recovery email is a Milestone 4+ concern.
+
+### 3.4 API surface (v1)
 
 | Method | Path | Caller | Purpose |
 |---|---|---|---|
+| `POST` | `/v1/auth/apple` | Mac | Exchange an Apple ID token for a backend JWT |
+| `POST` | `/v1/auth/google` | Android | Exchange a Google ID token for a backend JWT |
+| `POST` | `/v1/account:pair-init` | Mac | Get a one-time pairing code |
+| `POST` | `/v1/account:pair-complete` | Android | Redeem a pairing code; merge the Google account into the Apple account |
 | `POST` | `/v1/devices/register` | Mac | Register a device, get a device token |
 | `POST` | `/v1/usage:batchUpload` | Mac | Push a batch of usage events (idempotent by client-supplied id) |
 | `GET`  | `/v1/policy/current` | Mac, Android | Fetch current policy for the device |
