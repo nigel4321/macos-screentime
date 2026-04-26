@@ -95,18 +95,18 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Unit tests for each transition
 
 ### 1.9 App wiring *(mac-only)*
-- [ ] Root `MenuBarExtra` scene
-- [ ] Hide Dock icon via `LSUIElement` in Info.plist
-- [ ] Dependency container wiring UsageCollector → LocalStore
-- [ ] Start collection on app launch
-- [ ] Graceful shutdown on quit (flush open event)
+- [x] Root `MenuBarExtra` scene
+- [x] Hide Dock icon via `LSUIElement` in Info.plist
+- [x] Dependency container wiring UsageCollector → LocalStore
+- [x] Start collection on app launch
+- [x] Graceful shutdown on quit (flush open event)
 
 ### 1.10 Today view *(mac-only)*
-- [ ] `TodayViewModel` querying LocalStore for today's aggregated usage
-- [ ] Top-5 apps list UI in the menu popover
-- [ ] Live updates as events land
-- [ ] Empty state
-- [ ] First-launch onboarding screen (observe-only copy)
+- [x] `TodayViewModel` querying LocalStore for today's aggregated usage
+- [x] Top-5 apps list UI in the menu popover
+- [x] Live updates as events land
+- [x] Empty state
+- [x] First-launch onboarding screen (observe-only copy)
 
 ### 1.11 CI
 - [x] `.github/workflows/mac.yml` on `macos-14`

@@ -1,0 +1,48 @@
+name: MacAgent
+options:
+  bundleIdPrefix: com.macagent
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  xcodeVersion: "16"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    ENABLE_HARDENED_RUNTIME: YES
+
+packages:
+  MacAgentCore:
+    path: ../
+
+targets:
+  MacAgent:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: .
+        excludes:
+          - project.yml
+          - MacAgent.xcodeproj
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.macagent.MacAgent
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        INFOPLIST_FILE: Info.plist
+    dependencies:
+      - package: MacAgentCore
+        product: PolicyEngine
+      - package: MacAgentCore
+        product: LocalStore
+      - package: MacAgentCore
+        product: UsageCollector
+    info:
+      path: Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleVersion: "1"
+        CFBundleShortVersionString: "0.1.0"
+        NSHighResolutionCapable: true
+        NSPrincipalClass: NSApplication

@@ -26,6 +26,9 @@ mac-agent/**/.build/
 **/*.xcscheme
 !**/xcshareddata/**/*.xcscheme
 
+# xcodegen-generated Xcode project (regenerate from mac-agent/App/project.yml)
+mac-agent/App/MacAgent.xcodeproj/
+
 # Swift Package Manager
 .swiftpm/
 Package.resolved
