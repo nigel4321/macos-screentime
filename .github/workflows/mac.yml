@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build-test:
     name: swift build + test
-    runs-on: macos-15
+    runs-on: macos-14
     defaults:
       run:
         working-directory: mac-agent
@@ -57,6 +57,18 @@ jobs:
       - name: Generate Xcode project
         working-directory: mac-agent/App
         run: xcodegen generate --spec project.yml
+
+      # xcodegen 2.45 produces objectVersion 77, which Xcode 15 cannot read.
+      # Switch to the latest preinstalled Xcode 16 just for the xcodebuild
+      # step. swift build / swift test above use the default Xcode 15.4
+      # toolchain (Swift 5.10) on purpose — Swift 6 forbids the SwiftLint
+      # plugin's prebuild-from-source command, which we cannot avoid.
+      - name: Select Xcode 16 for xcodebuild
+        run: |
+          XCODE16=$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)
+          echo "Using $XCODE16"
+          sudo xcode-select -s "$XCODE16"
+          xcodebuild -version
 
       - name: xcodebuild build (MacAgent app target)
         working-directory: mac-agent/App
