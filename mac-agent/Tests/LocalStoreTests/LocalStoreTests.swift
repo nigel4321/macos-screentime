@@ -82,6 +82,24 @@ final class LocalStoreTests: XCTestCase {
         XCTAssertNoThrow(try dao.markSynced(ids: [], at: Date()))
     }
 
+    func testFetchSinceFiltersOlderEvents() throws {
+        let dao = UsageEventDAO(database: database)
+        let cutoff = Date(timeIntervalSince1970: 1_000_000)
+        try dao.insert(UsageEvent(                              // before cutoff
+            bundleID: "com.example.A",
+            start: Date(timeIntervalSince1970: 900_000),
+            end: Date(timeIntervalSince1970: 901_000)
+        ))
+        try dao.insert(UsageEvent(                              // after cutoff
+            bundleID: "com.example.B",
+            start: Date(timeIntervalSince1970: 1_000_000),
+            end: Date(timeIntervalSince1970: 1_001_000)
+        ))
+        let rows = try dao.fetch(since: cutoff)
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows[0].bundleID, BundleID("com.example.B"))
+    }
+
     // MARK: - PolicyDAO
 
     func testReadFromEmptyDatabaseReturnsNil() throws {

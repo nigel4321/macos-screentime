@@ -28,6 +28,17 @@ public struct UsageEventDAO {
         }
     }
 
+    /// Returns all events whose start timestamp is on or after `startDate`.
+    public func fetch(since startDate: Date) throws -> [UsageEvent] {
+        let threshold = Int64(startDate.timeIntervalSince1970)
+        return try dbQueue.read { db in
+            try UsageEventRow
+                .filter(Column("started_at") >= threshold)
+                .fetchAll(db)
+                .map { $0.toUsageEvent() }
+        }
+    }
+
     /// Stamps the given rows with a sync timestamp so they are excluded
     /// from future `fetchUnsynced` calls.
     public func markSynced(ids: [Int64], at date: Date) throws {
