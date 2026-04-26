@@ -38,9 +38,9 @@ jobs:
           path: |
             mac-agent/.build
             ~/Library/Caches/org.swift.swiftpm
-          key: spm-${{ runner.os }}-${{ hashFiles('mac-agent/Package.resolved', 'mac-agent/Package.swift') }}
+          key: spm-v2-${{ runner.os }}-${{ hashFiles('mac-agent/Package.resolved', 'mac-agent/Package.swift') }}
           restore-keys: |
-            spm-${{ runner.os }}-
+            spm-v2-${{ runner.os }}-
 
       # SwiftLint is attached to each target as a build-tool plugin, so
       # `swift build` lints as a side effect. A dedicated lint step is
