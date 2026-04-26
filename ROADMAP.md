@@ -46,29 +46,29 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 > **Sub-sections §1.4 – §1.10 require a macOS environment** to exercise meaningfully (TDD cycles need `swift test`; SwiftUI / AppKit code requires the macOS SDK). They are left unticked and will be resumed on the Mac.
 
-### 1.4 PolicyEngine — no-policy case (TDD) *(awaits macOS)*
-- [ ] RED: `evaluate` returns empty actions when policy is nil
-- [ ] GREEN: minimal `evaluate` implementation
-- [ ] RED: `evaluate` returns empty when policy has no rules
-- [ ] GREEN: extend implementation
+### 1.4 PolicyEngine — no-policy case (TDD)
+- [x] RED: `evaluate` returns empty actions when policy is nil
+- [x] GREEN: minimal `evaluate` implementation
+- [x] RED: `evaluate` returns empty when policy has no rules
+- [x] GREEN: extend implementation
 
-### 1.5 PolicyEngine — per-app daily limits (TDD) *(awaits macOS)*
-- [ ] RED: limit not crossed → no shield
-- [ ] GREEN: accumulate today's usage for bundleId, compare to limit
-- [ ] RED: limit exactly crossed → shield emitted
-- [ ] RED: yesterday's data alone does not trip today's limit
-- [ ] GREEN: scope accumulation to "today" via injected clock
-- [ ] RED: multiple apps with independent limits
-- [ ] GREEN: handle N apps
+### 1.5 PolicyEngine — per-app daily limits (TDD)
+- [x] RED: limit not crossed → no shield
+- [x] GREEN: accumulate today's usage for bundleId, compare to limit
+- [x] RED: limit exactly crossed → shield emitted
+- [x] RED: yesterday's data alone does not trip today's limit
+- [x] GREEN: scope accumulation to "today" via injected clock
+- [x] RED: multiple apps with independent limits
+- [x] GREEN: handle N apps
 
-### 1.6 PolicyEngine — downtime windows (TDD) *(awaits macOS)*
-- [ ] RED: outside window → no shield
-- [ ] RED: inside window → shield all apps on block list
-- [ ] RED: window crossing midnight
-- [ ] RED: DST spring-forward boundary
-- [ ] RED: DST fall-back boundary
-- [ ] GREEN: implement window evaluation with injected `Clock` + `TimeZone`
-- [ ] Property test: window-active ⇔ now ∈ [start, end]
+### 1.6 PolicyEngine — downtime windows (TDD)
+- [x] RED: outside window → no shield
+- [x] RED: inside window → shield all apps on block list
+- [x] RED: window crossing midnight
+- [x] RED: DST spring-forward boundary
+- [x] RED: DST fall-back boundary
+- [x] GREEN: implement window evaluation with injected `Clock` + `TimeZone`
+- [x] Property test: window-active ⇔ now ∈ [start, end]
 
 ### 1.7 LocalStore *(awaits macOS)*
 - [ ] Add GRDB dependency to `Core`
@@ -114,7 +114,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] Run `xcodebuild test` for all Core test targets *(mac-only — requires Xcode app target from §1.1)*
 - [x] Cache SPM packages
 - [x] Status badge in README
-- [ ] Green build on `main` *(awaits first push from a Mac; §1.4+ need verifiable tests first)*
+- [x] Green build on `main`
 
 ---
 

@@ -25,8 +25,60 @@ public struct PolicyEngine {
         now: Date,
         calendar: Calendar
     ) -> [EnforcementAction] {
-        // Implemented via TDD across §1.4 (no-policy case), §1.5 (per-app
-        // daily limits), and §1.6 (downtime windows).
-        []
+        guard let policy else { return [] }
+
+        var actions: [EnforcementAction] = []
+
+        // Per-app daily limits: accumulate today's foreground time per app.
+        let todayStart = calendar.startOfDay(for: now)
+        for limit in policy.appLimits {
+            let todayDuration = usage
+                .filter { $0.bundleID == limit.bundleID && $0.start >= todayStart }
+                .reduce(0.0) { $0 + $1.duration }
+            if todayDuration >= limit.dailyLimit {
+                actions.append(.shield(limit.bundleID))
+            }
+        }
+
+        // Downtime windows: if now falls inside any window, shield every blocked app.
+        if !policy.blockList.isEmpty {
+            let inDowntime = policy.downtimeWindows.contains { isActive(window: $0, at: now, calendar: calendar) }
+            if inDowntime {
+                actions += policy.blockList.map { .shield($0) }
+            }
+        }
+
+        return actions
+    }
+
+    // Returns true when `now` falls within the window's active period.
+    // End boundary is exclusive ([start, end)); crossing-midnight windows
+    // cover [start, midnight) on the named day and [midnight, end) on the
+    // following day.
+    private func isActive(window: DowntimeWindow, at now: Date, calendar: Calendar) -> Bool {
+        let comps = calendar.dateComponents([.weekday, .hour, .minute, .second], from: now)
+        guard
+            let weekday = comps.weekday,
+            let today = DayOfWeek(rawValue: weekday)
+        else { return false }
+
+        let secondOfDay = (comps.hour ?? 0) * 3_600
+            + (comps.minute ?? 0) * 60
+            + (comps.second ?? 0)
+
+        if window.startSecondOfDay < window.endSecondOfDay {
+            // Normal window — does not cross midnight.
+            return window.daysOfWeek.contains(today)
+                && secondOfDay >= window.startSecondOfDay
+                && secondOfDay < window.endSecondOfDay
+        } else {
+            // Crosses midnight: evening portion belongs to the named day,
+            // morning portion belongs to the following day (yesterday was named).
+            let yesterdayRaw = weekday == 1 ? 7 : weekday - 1
+            guard let yesterday = DayOfWeek(rawValue: yesterdayRaw) else { return false }
+            let eveningActive = window.daysOfWeek.contains(today) && secondOfDay >= window.startSecondOfDay
+            let morningActive = window.daysOfWeek.contains(yesterday) && secondOfDay < window.endSecondOfDay
+            return eveningActive || morningActive
+        }
     }
 }

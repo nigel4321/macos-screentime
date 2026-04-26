@@ -23,12 +23,14 @@ opt_in_rules:
   - last_where
   - contains_over_first_not_nil
   - redundant_nil_coalescing
-  - unused_import
   - closure_spacing
   - sorted_imports
   - fatal_error_message
   - force_unwrapping
   - implicitly_unwrapped_optional
+
+analyzer_rules:
+  - unused_import
 
 line_length:
   warning: 120
