@@ -9,8 +9,9 @@ import (
 
 // Config captures the process-wide settings the server reads at startup.
 type Config struct {
-	Port     string
-	LogLevel slog.Level
+	Port        string
+	LogLevel    slog.Level
+	DatabaseURL string // empty disables Postgres-dependent features (dev only)
 }
 
 // Load reads configuration from environment variables, applying sane
@@ -18,8 +19,9 @@ type Config struct {
 // present but unparseable (e.g. an unknown LOG_LEVEL).
 func Load() (Config, error) {
 	cfg := Config{
-		Port:     getEnv("PORT", "8080"),
-		LogLevel: slog.LevelInfo,
+		Port:        getEnv("PORT", "8080"),
+		LogLevel:    slog.LevelInfo,
+		DatabaseURL: os.Getenv("DATABASE_URL"),
 	}
 
 	if raw := os.Getenv("LOG_LEVEL"); raw != "" {

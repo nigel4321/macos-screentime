@@ -132,15 +132,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] `Makefile` with run/test/lint targets
 
 ### 2.2 Backend: Postgres + migrations
-- [ ] Choose migration tool (goose)
-- [ ] Add `pgtestdb` for integration tests
-- [ ] Migration 001: `account`
-- [ ] Migration 002: `device`
-- [ ] Migration 003: `usage_event` parent + monthly partitioning
-- [ ] Migration 004: `policy`
-- [ ] Helper to create next month's partition
-- [ ] Connection pool with `pgxpool`
-- [ ] Include DB ping in `/healthz`
+- [x] Choose migration tool (goose)
+- [x] Add `pgtestdb` for integration tests
+- [x] Migration 001: `account` *(includes `account_identity` per ARCHITECTURE §3.3)*
+- [x] Migration 002: `device`
+- [x] Migration 003: `usage_event` parent + monthly partitioning
+- [x] Migration 004: `policy`
+- [x] Helper to create next month's partition
+- [x] Connection pool with `pgxpool`
+- [x] Include DB ping in `/healthz`
 
 ### 2.3 Backend: auth
 - [ ] JWT signing key management (env var, rotatable)

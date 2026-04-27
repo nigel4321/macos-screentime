@@ -11,8 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/nigel4321/macos-screentime/backend/internal/api"
 	"github.com/nigel4321/macos-screentime/backend/internal/config"
+	"github.com/nigel4321/macos-screentime/backend/internal/db"
 )
 
 const shutdownTimeout = 15 * time.Second
@@ -33,14 +36,32 @@ func run() error {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	slog.SetDefault(logger)
 
-	srv := &http.Server{
-		Addr:              ":" + cfg.Port,
-		Handler:           api.NewRouter(),
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	var pool *pgxpool.Pool
+	if cfg.DatabaseURL != "" {
+		if err := db.Migrate(ctx, cfg.DatabaseURL); err != nil {
+			return err
+		}
+		pool, err = db.Open(ctx, cfg.DatabaseURL)
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+		if err := db.EnsureCurrentAndNextMonthPartitions(ctx, pool, time.Now().UTC()); err != nil {
+			return err
+		}
+		logger.Info("database ready", "migrations", "applied", "partitions", "ensured")
+	} else {
+		logger.Warn("DATABASE_URL not set — running without Postgres (dev only)")
+	}
+
+	srv := &http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           api.NewRouter(pool),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 
 	errCh := make(chan error, 1)
 	go func() {

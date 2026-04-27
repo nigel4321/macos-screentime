@@ -10,14 +10,17 @@ import (
 // NewRouter constructs the public HTTP router with default middleware
 // and all currently-mounted endpoints. Future milestones add the
 // auth-protected routes (§2.3+).
-func NewRouter() http.Handler {
+//
+// db may be nil in dev/test setups without DATABASE_URL; HealthHandler
+// then reports the database as "disabled".
+func NewRouter(db Pinger) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(echoRequestID)
 
-	r.Method(http.MethodGet, "/healthz", HealthHandler())
+	r.Method(http.MethodGet, "/healthz", HealthHandler(db))
 	return r
 }
 

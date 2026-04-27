@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewRouter_HealthzMounted(t *testing.T) {
-	srv := httptest.NewServer(NewRouter())
+	srv := httptest.NewServer(NewRouter(nil))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/healthz")
@@ -25,7 +25,7 @@ func TestNewRouter_HealthzMounted(t *testing.T) {
 }
 
 func TestNewRouter_UnknownPathReturns404(t *testing.T) {
-	srv := httptest.NewServer(NewRouter())
+	srv := httptest.NewServer(NewRouter(nil))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/does-not-exist")
