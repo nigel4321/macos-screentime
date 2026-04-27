@@ -1,6 +1,7 @@
 # macos-screentime
 
 [![mac](https://github.com/nigel4321/macos-screentime/actions/workflows/mac.yml/badge.svg)](https://github.com/nigel4321/macos-screentime/actions/workflows/mac.yml)
+[![backend](https://github.com/nigel4321/macos-screentime/actions/workflows/backend.yml/badge.svg)](https://github.com/nigel4321/macos-screentime/actions/workflows/backend.yml)
 
 
 A native macOS agent that reads and enforces screen-time restrictions, paired with an Android dashboard for viewing usage and editing policy.

@@ -183,10 +183,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] Handler test
 
 ### 2.8 Backend CI
-- [ ] `.github/workflows/backend.yml` with path filter `backend/**`
-- [ ] Postgres service container
-- [ ] `go vet`, `go test`, `golangci-lint`
-- [ ] Cache Go modules
+- [x] `.github/workflows/backend.yml` with path filter `backend/**`
+- [x] Postgres service container *(postgres:16, healthcheck-gated)*
+- [x] `go vet`, `go test`, `golangci-lint`
+- [x] Cache Go modules *(via `actions/setup-go@v5` built-in cache)*
 
 ### 2.9 Backend deploy
 - [ ] Dockerfile (multi-stage, distroless base)

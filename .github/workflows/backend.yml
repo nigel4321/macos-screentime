@@ -1,0 +1,104 @@
+name: backend
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: go build + vet + test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PG_TEST_HOST: localhost
+      PG_TEST_PORT: "5432"
+      PG_TEST_USER: postgres
+      PG_TEST_PASSWORD: postgres
+      PG_TEST_OPTIONS: sslmode=disable
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Show toolchain versions
+        run: |
+          go version
+          go env GOMOD
+
+      - name: go mod download
+        run: go mod download
+
+      - name: go vet (default tags)
+        run: go vet ./...
+
+      - name: go vet (integration tag)
+        run: go vet -tags=integration ./...
+
+      - name: go build
+        run: go build ./...
+
+      - name: go test (unit)
+        run: go test -race -count=1 ./...
+
+      - name: go test (integration)
+        run: go test -race -count=1 -tags=integration ./...
+
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.0
+          working-directory: backend
+          args: --timeout=3m
