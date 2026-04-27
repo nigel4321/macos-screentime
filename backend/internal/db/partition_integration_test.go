@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/nigel4321/macos-screentime/backend/internal/db"
+	"github.com/nigel4321/macos-screentime/backend/internal/dbtest"
 )
 
 func TestEnsureMonthPartition_CreatesPartitionAndIsIdempotent(t *testing.T) {
-	pool := newTestPool(t)
+	pool := dbtest.NewPool(t)
 	ctx := context.Background()
 
 	march := time.Date(2026, 3, 15, 12, 0, 0, 0, time.UTC)
@@ -39,7 +40,7 @@ func TestEnsureMonthPartition_CreatesPartitionAndIsIdempotent(t *testing.T) {
 }
 
 func TestEnsureMonthPartition_AcceptsInsertsForThatMonth(t *testing.T) {
-	pool := newTestPool(t)
+	pool := dbtest.NewPool(t)
 	ctx := context.Background()
 
 	when := time.Date(2026, 5, 10, 9, 30, 0, 0, time.UTC)
@@ -77,7 +78,7 @@ func TestEnsureMonthPartition_AcceptsInsertsForThatMonth(t *testing.T) {
 }
 
 func TestEnsureCurrentAndNextMonthPartitions_CreatesBoth(t *testing.T) {
-	pool := newTestPool(t)
+	pool := dbtest.NewPool(t)
 	ctx := context.Background()
 
 	now := time.Date(2026, 11, 25, 0, 0, 0, 0, time.UTC) // crosses year boundary

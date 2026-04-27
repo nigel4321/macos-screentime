@@ -143,18 +143,18 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Include DB ping in `/healthz`
 
 ### 2.3 Backend: auth
-- [ ] JWT signing key management (env var, rotatable)
-- [ ] Apple identity-token verifier (JWKS fetch + cache)
-- [ ] Google identity-token verifier (JWKS fetch + cache)
-- [ ] `POST /v1/auth/apple` → backend JWT
-- [ ] `POST /v1/auth/google` → backend JWT
-- [ ] `POST /v1/account:pair-init` — Mac requests a 6-digit pairing code (~10m TTL)
-- [ ] `POST /v1/account:pair-complete` — Android redeems the code; merges Google account into Apple account, moves `account_identity` rows
-- [ ] `Authenticator` middleware: verify JWT, load account
-- [ ] `DeviceContext` middleware: resolve device from token
-- [ ] Tests for each verifier with signed fixtures
-- [ ] Tests for authz denial paths
-- [ ] Tests for the pairing flow (init → complete, expired code, code reuse, double-pair)
+- [x] JWT signing key management (env var, rotatable) *(ES256, kid from SHA-256 of SPKI; `JWT_VERIFICATION_KEYS` carries rotated-out keys)*
+- [x] Apple identity-token verifier (JWKS fetch + cache)
+- [x] Google identity-token verifier (JWKS fetch + cache)
+- [x] `POST /v1/auth/apple` → backend JWT
+- [x] `POST /v1/auth/google` → backend JWT
+- [x] `POST /v1/account:pair-init` — Mac requests a 6-digit pairing code (~10m TTL)
+- [x] `POST /v1/account:pair-complete` — Android redeems the code; merges Google account into Apple account, moves `account_identity` rows *(also moves any `device` rows defensively; merge runs in a SERIALIZABLE transaction)*
+- [x] `Authenticator` middleware: verify JWT, load account
+- [x] `DeviceContext` middleware: resolve device from token
+- [x] Tests for each verifier with signed fixtures *(local httptest JWKS server; provider-specific iss/aud/expiry checks)*
+- [x] Tests for authz denial paths
+- [x] Tests for the pairing flow (init → complete, expired code, code reuse, double-pair)
 
 ### 2.4 Backend: `POST /v1/devices/register`
 - [ ] Route + request/response types

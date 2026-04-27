@@ -1,6 +1,12 @@
 //go:build integration
 
-package db_test
+// Package dbtest provides Postgres test helpers built around pgtestdb:
+// a goose-driven migrator over the embedded SQL files, env-driven
+// connection config, and a freshly-migrated *pgxpool.Pool per test.
+//
+// All identifiers in this package are gated behind `//go:build
+// integration` so the package compiles only when integration tests run.
+package dbtest
 
 import (
 	"context"
@@ -19,9 +25,6 @@ import (
 	"github.com/nigel4321/macos-screentime/backend/migrations"
 )
 
-// embeddedMigrator runs the goose migrations from the embedded FS. It
-// satisfies pgtestdb.Migrator so each test gets a freshly migrated
-// database (cached as a template by pgtestdb).
 type embeddedMigrator struct{}
 
 func (embeddedMigrator) Hash() (string, error) {
@@ -56,9 +59,9 @@ func (embeddedMigrator) Migrate(ctx context.Context, sqlDB *sql.DB, _ pgtestdb.C
 	return err
 }
 
-// testDBConfig builds a pgtestdb.Config from PG_TEST_* env vars with
+// Config returns a pgtestdb.Config from PG_TEST_* env vars with
 // dev-friendly defaults.
-func testDBConfig() pgtestdb.Config {
+func Config() pgtestdb.Config {
 	return pgtestdb.Config{
 		DriverName: "pgx",
 		Host:       envOr("PG_TEST_HOST", "localhost"),
@@ -76,11 +79,11 @@ func envOr(k, fallback string) string {
 	return fallback
 }
 
-// newTestPool returns a freshly migrated database wrapped as a pgxpool.
+// NewPool returns a freshly migrated database wrapped as a pgxpool.
 // Cleanup is registered via t.Cleanup.
-func newTestPool(t *testing.T) *pgxpool.Pool {
+func NewPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	conf := pgtestdb.Custom(t, testDBConfig(), embeddedMigrator{})
+	conf := pgtestdb.Custom(t, Config(), embeddedMigrator{})
 	pool, err := pgxpool.New(context.Background(), conf.URL())
 	if err != nil {
 		t.Fatalf("pgxpool.New: %v", err)

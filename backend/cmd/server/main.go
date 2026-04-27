@@ -3,7 +3,11 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,8 +18,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/nigel4321/macos-screentime/backend/internal/api"
+	"github.com/nigel4321/macos-screentime/backend/internal/auth"
 	"github.com/nigel4321/macos-screentime/backend/internal/config"
 	"github.com/nigel4321/macos-screentime/backend/internal/db"
+)
+
+const (
+	appleJWKSURL  = "https://appleid.apple.com/auth/keys"
+	googleJWKSURL = "https://www.googleapis.com/oauth2/v3/certs"
 )
 
 const shutdownTimeout = 15 * time.Second
@@ -57,9 +67,46 @@ func run() error {
 		logger.Warn("DATABASE_URL not set — running without Postgres (dev only)")
 	}
 
+	deps := api.Deps{DB: pool}
+	if pool != nil && cfg.JWTSigningKey != "" {
+		signer, err := auth.NewSigner([]byte(cfg.JWTSigningKey))
+		if err != nil {
+			return fmt.Errorf("parse JWT signing key: %w", err)
+		}
+		verifierKeys := []*ecdsa.PublicKey{signer.PublicKey()}
+		for i, raw := range cfg.JWTVerificationKeys {
+			pub, err := parseECPublicKey(raw)
+			if err != nil {
+				return fmt.Errorf("parse JWT_VERIFICATION_KEYS[%d]: %w", i, err)
+			}
+			verifierKeys = append(verifierKeys, pub)
+		}
+		jwtVerifier, err := auth.NewVerifier(verifierKeys...)
+		if err != nil {
+			return fmt.Errorf("build JWT verifier: %w", err)
+		}
+
+		deps.Store = auth.NewStore(pool)
+		deps.JWTSigner = signer
+		deps.JWTVerifier = jwtVerifier
+		if cfg.AppleAudience != "" {
+			deps.AppleVerifier = auth.NewAppleVerifier(auth.NewJWKSCache(appleJWKSURL), cfg.AppleAudience)
+		} else {
+			logger.Warn("APPLE_AUDIENCE not set — /v1/auth/apple disabled")
+		}
+		if cfg.GoogleAudience != "" {
+			deps.GoogleVerifier = auth.NewGoogleVerifier(auth.NewJWKSCache(googleJWKSURL), cfg.GoogleAudience)
+		} else {
+			logger.Warn("GOOGLE_AUDIENCE not set — /v1/auth/google disabled")
+		}
+		logger.Info("auth ready", "rotated_keys", len(cfg.JWTVerificationKeys))
+	} else if pool != nil {
+		logger.Warn("JWT_SIGNING_KEY not set — auth routes disabled")
+	}
+
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           api.NewRouter(pool),
+		Handler:           api.NewRouter(deps),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -86,4 +133,20 @@ func run() error {
 	}
 	logger.Info("server stopped cleanly")
 	return nil
+}
+
+func parseECPublicKey(pemStr string) (*ecdsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(pemStr))
+	if block == nil {
+		return nil, errors.New("no PEM block")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	ec, ok := pub.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("not an EC public key")
+	}
+	return ec, nil
 }

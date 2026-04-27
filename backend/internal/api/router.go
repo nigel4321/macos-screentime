@@ -5,22 +5,56 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/nigel4321/macos-screentime/backend/internal/auth"
 )
 
+// Deps bundles the dependencies the API layer needs to mount its
+// routes. A nil DB or nil auth dependencies disable the routes that
+// require them, which keeps tests and dev-without-Postgres flows
+// simple.
+type Deps struct {
+	DB             Pinger
+	Store          *auth.Store
+	AppleVerifier  *auth.IDTokenVerifier
+	GoogleVerifier *auth.IDTokenVerifier
+	JWTSigner      *auth.Signer
+	JWTVerifier    *auth.Verifier
+}
+
 // NewRouter constructs the public HTTP router with default middleware
-// and all currently-mounted endpoints. Future milestones add the
-// auth-protected routes (§2.3+).
-//
-// db may be nil in dev/test setups without DATABASE_URL; HealthHandler
-// then reports the database as "disabled".
-func NewRouter(db Pinger) http.Handler {
+// and all currently-mounted endpoints. Auth- and pairing-protected
+// routes are mounted only when the relevant Deps fields are non-nil.
+func NewRouter(d Deps) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(echoRequestID)
 
-	r.Method(http.MethodGet, "/healthz", HealthHandler(db))
+	r.Method(http.MethodGet, "/healthz", HealthHandler(d.DB))
+
+	if d.Store != nil && d.JWTSigner != nil {
+		if d.AppleVerifier != nil {
+			r.Method(http.MethodPost, "/v1/auth/apple",
+				IdentityExchangeHandler(d.AppleVerifier, d.Store, d.JWTSigner))
+		}
+		if d.GoogleVerifier != nil {
+			r.Method(http.MethodPost, "/v1/auth/google",
+				IdentityExchangeHandler(d.GoogleVerifier, d.Store, d.JWTSigner))
+		}
+
+		if d.JWTVerifier != nil {
+			r.Group(func(r chi.Router) {
+				r.Use(auth.Authenticator(d.JWTVerifier, d.Store))
+				r.Method(http.MethodPost, "/v1/account:pair-init",
+					PairInitHandler(d.Store))
+				r.Method(http.MethodPost, "/v1/account:pair-complete",
+					PairCompleteHandler(d.Store, d.JWTSigner))
+			})
+		}
+	}
+
 	return r
 }
 

@@ -12,6 +12,14 @@ type Config struct {
 	Port        string
 	LogLevel    slog.Level
 	DatabaseURL string // empty disables Postgres-dependent features (dev only)
+
+	// Auth (§2.3). Empty JWTSigningKey disables auth routes — useful in
+	// dev. Verification keys are additional public keys accepted during
+	// JWT key rotation.
+	JWTSigningKey       string   // PEM-encoded EC P-256 private key
+	JWTVerificationKeys []string // PEM-encoded EC P-256 public keys (rotated-out)
+	AppleAudience       string   // Mac app bundle id
+	GoogleAudience      string   // OAuth client id
 }
 
 // Load reads configuration from environment variables, applying sane
@@ -19,9 +27,21 @@ type Config struct {
 // present but unparseable (e.g. an unknown LOG_LEVEL).
 func Load() (Config, error) {
 	cfg := Config{
-		Port:        getEnv("PORT", "8080"),
-		LogLevel:    slog.LevelInfo,
-		DatabaseURL: os.Getenv("DATABASE_URL"),
+		Port:           getEnv("PORT", "8080"),
+		LogLevel:       slog.LevelInfo,
+		DatabaseURL:    os.Getenv("DATABASE_URL"),
+		JWTSigningKey:  os.Getenv("JWT_SIGNING_KEY"),
+		AppleAudience:  os.Getenv("APPLE_AUDIENCE"),
+		GoogleAudience: os.Getenv("GOOGLE_AUDIENCE"),
+	}
+	if raw := os.Getenv("JWT_VERIFICATION_KEYS"); raw != "" {
+		// Comma-separated PEMs: PEMs themselves contain newlines but
+		// no commas, so this split is unambiguous.
+		for _, p := range strings.Split(raw, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				cfg.JWTVerificationKeys = append(cfg.JWTVerificationKeys, p)
+			}
+		}
 	}
 
 	if raw := os.Getenv("LOG_LEVEL"); raw != "" {

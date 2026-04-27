@@ -5,16 +5,18 @@ package db_test
 import (
 	"context"
 	"testing"
+
+	"github.com/nigel4321/macos-screentime/backend/internal/dbtest"
 )
 
 // TestMigrate_AppliesAllSchemaTables checks that the migrated DB contains
 // every table the v1 schema declares. pgtestdb has already run migrations
 // to produce the template — this test asserts the result.
 func TestMigrate_AppliesAllSchemaTables(t *testing.T) {
-	pool := newTestPool(t)
+	pool := dbtest.NewPool(t)
 	ctx := context.Background()
 
-	want := []string{"account", "account_identity", "device", "usage_event", "policy"}
+	want := []string{"account", "account_identity", "device", "usage_event", "policy", "pairing_code"}
 	for _, table := range want {
 		var exists bool
 		err := pool.QueryRow(ctx, `
@@ -35,7 +37,7 @@ func TestMigrate_AppliesAllSchemaTables(t *testing.T) {
 // TestMigrate_GooseTracksVersion verifies goose recorded the four
 // migrations in goose_db_version, so a re-run is a no-op.
 func TestMigrate_GooseTracksVersion(t *testing.T) {
-	pool := newTestPool(t)
+	pool := dbtest.NewPool(t)
 	ctx := context.Background()
 
 	var maxVersion int64
@@ -43,7 +45,7 @@ func TestMigrate_GooseTracksVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query goose_db_version: %v", err)
 	}
-	if maxVersion < 4 {
-		t.Errorf("expected goose at version >= 4, got %d", maxVersion)
+	if maxVersion < 5 {
+		t.Errorf("expected goose at version >= 5, got %d", maxVersion)
 	}
 }
