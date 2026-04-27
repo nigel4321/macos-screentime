@@ -157,11 +157,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Tests for the pairing flow (init → complete, expired code, code reuse, double-pair)
 
 ### 2.4 Backend: `POST /v1/devices/register`
-- [ ] Route + request/response types
-- [ ] Insert device row keyed to account
-- [ ] Return device id + device token
-- [ ] Idempotent on (account, device fingerprint)
-- [ ] Handler tests
+- [x] Route + request/response types
+- [x] Insert device row keyed to account
+- [x] Return device id + device token *(plaintext returned once; server stores SHA-256 hash)*
+- [x] Idempotent on (account, device fingerprint) *(UPSERT rotates token, bumps last_seen_at)*
+- [x] Handler tests *(unit + integration: register, idempotent rotation, cross-account isolation, validation)*
 
 ### 2.5 Backend: `POST /v1/usage:batchUpload`
 - [ ] Route handler accepting batch JSON

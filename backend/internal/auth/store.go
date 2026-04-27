@@ -157,6 +157,55 @@ func (s *Store) ConsumePairingCodeAndMerge(ctx context.Context, code, srcAccount
 	return dstAccountID, nil
 }
 
+// RegisterDevice upserts a device for accountID keyed on fingerprint
+// and returns the device id. The (account_id, fingerprint) pair is the
+// idempotency key: re-registration with the same fingerprint rotates
+// the stored token hash and bumps last_seen_at, so a client whose
+// local token was lost (Keychain wipe, OS reinstall) can recover
+// without operator intervention. Returns an error if platform is not
+// one of the schema's allowed values.
+func (s *Store) RegisterDevice(ctx context.Context, accountID, platform, fingerprint string, tokenHash []byte) (string, error) {
+	if !IsValidPlatform(platform) {
+		return "", fmt.Errorf("auth: register device: invalid platform %q", platform)
+	}
+	var id string
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO device (account_id, platform, fingerprint, device_token_hash, last_seen_at)
+		VALUES ($1::uuid, $2, $3, $4, now())
+		ON CONFLICT (account_id, fingerprint) DO UPDATE
+		    SET device_token_hash = EXCLUDED.device_token_hash,
+		        last_seen_at      = now()
+		RETURNING id::text
+	`, accountID, platform, fingerprint, tokenHash).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("auth: register device: %w", err)
+	}
+	return id, nil
+}
+
+// ResolveDevice returns the device id matching tokenHash for the given
+// account. Lookups are scoped to accountID so a stolen token cannot be
+// replayed against a different account. Bumps last_seen_at on hit.
+// Returns ErrUnknownDevice if no row matches.
+func (s *Store) ResolveDevice(ctx context.Context, accountID, deviceToken string) (string, error) {
+	hash := HashDeviceToken(deviceToken)
+	var id string
+	err := s.pool.QueryRow(ctx, `
+		UPDATE device
+		   SET last_seen_at = now()
+		 WHERE account_id        = $1::uuid
+		   AND device_token_hash = $2
+		RETURNING id::text
+	`, accountID, hash).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrUnknownDevice
+	}
+	if err != nil {
+		return "", fmt.Errorf("auth: resolve device: %w", err)
+	}
+	return id, nil
+}
+
 // AccountExists reports whether an account row with the given id is
 // still present. The Authenticator middleware uses this to reject JWTs
 // whose account has been deleted (e.g. by a merge).

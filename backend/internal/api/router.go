@@ -25,6 +25,10 @@ type Deps struct {
 	GoogleVerifier *auth.IDTokenVerifier
 	JWTSigner      *auth.Signer
 	JWTVerifier    *auth.Verifier
+	// DeviceTokenMinter overrides the default crypto/rand-backed token
+	// generator. Leave nil in production; tests inject a deterministic
+	// minter when they need to assert exact response payloads.
+	DeviceTokenMinter DeviceTokenMinter
 }
 
 // NewRouter constructs the public HTTP router with default middleware
@@ -50,12 +54,18 @@ func NewRouter(d Deps) http.Handler {
 		}
 
 		if d.JWTVerifier != nil {
+			minter := d.DeviceTokenMinter
+			if minter == nil {
+				minter = DefaultDeviceTokenMinter()
+			}
 			r.Group(func(r chi.Router) {
 				r.Use(auth.Authenticator(d.JWTVerifier, d.Store))
 				r.Method(http.MethodPost, "/v1/account:pair-init",
 					PairInitHandler(d.Store))
 				r.Method(http.MethodPost, "/v1/account:pair-complete",
 					PairCompleteHandler(d.Store, d.JWTSigner))
+				r.Method(http.MethodPost, "/v1/devices/register",
+					DevicesRegisterHandler(d.Store, minter))
 			})
 		}
 	}

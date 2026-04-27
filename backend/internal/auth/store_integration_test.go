@@ -242,6 +242,147 @@ func TestStore_ConsumePairingCodeAndMerge_IdempotentSelfMerge(t *testing.T) {
 	}
 }
 
+func TestStore_RegisterDevice_Inserts(t *testing.T) {
+	pool := dbtest.NewPool(t)
+	store := auth.NewStore(pool)
+	ctx := context.Background()
+
+	account, _ := store.FindOrCreateAccountByIdentity(ctx, auth.Identity{
+		Provider: "apple", Subject: "001234.apple",
+	})
+
+	tok, err := auth.GenerateDeviceToken()
+	if err != nil {
+		t.Fatalf("GenerateDeviceToken: %v", err)
+	}
+	deviceID, err := store.RegisterDevice(ctx, account, auth.PlatformMacOS, "hw-fp-1", auth.HashDeviceToken(tok))
+	if err != nil {
+		t.Fatalf("RegisterDevice: %v", err)
+	}
+	if deviceID == "" {
+		t.Fatal("empty device id")
+	}
+
+	resolved, err := store.ResolveDevice(ctx, account, tok)
+	if err != nil {
+		t.Fatalf("ResolveDevice: %v", err)
+	}
+	if resolved != deviceID {
+		t.Errorf("ResolveDevice: got %q, want %q", resolved, deviceID)
+	}
+}
+
+func TestStore_RegisterDevice_IdempotentRotatesToken(t *testing.T) {
+	pool := dbtest.NewPool(t)
+	store := auth.NewStore(pool)
+	ctx := context.Background()
+
+	account, _ := store.FindOrCreateAccountByIdentity(ctx, auth.Identity{
+		Provider: "apple", Subject: "001234.apple",
+	})
+
+	tok1, _ := auth.GenerateDeviceToken()
+	id1, err := store.RegisterDevice(ctx, account, auth.PlatformMacOS, "hw-fp", auth.HashDeviceToken(tok1))
+	if err != nil {
+		t.Fatalf("first register: %v", err)
+	}
+
+	tok2, _ := auth.GenerateDeviceToken()
+	id2, err := store.RegisterDevice(ctx, account, auth.PlatformMacOS, "hw-fp", auth.HashDeviceToken(tok2))
+	if err != nil {
+		t.Fatalf("second register: %v", err)
+	}
+	if id1 != id2 {
+		t.Errorf("device id rotated on re-register: %q vs %q", id1, id2)
+	}
+
+	// Old token no longer resolves.
+	if _, err := store.ResolveDevice(ctx, account, tok1); err != auth.ErrUnknownDevice {
+		t.Errorf("old token resolves: err=%v, want ErrUnknownDevice", err)
+	}
+	// New token does.
+	if _, err := store.ResolveDevice(ctx, account, tok2); err != nil {
+		t.Errorf("new token: %v", err)
+	}
+
+	var n int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM device WHERE account_id = $1::uuid`, account).Scan(&n); err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("device row count: got %d, want 1", n)
+	}
+}
+
+func TestStore_RegisterDevice_DistinctFingerprintsCreateRows(t *testing.T) {
+	pool := dbtest.NewPool(t)
+	store := auth.NewStore(pool)
+	ctx := context.Background()
+
+	account, _ := store.FindOrCreateAccountByIdentity(ctx, auth.Identity{
+		Provider: "apple", Subject: "001234.apple",
+	})
+
+	tok1, _ := auth.GenerateDeviceToken()
+	tok2, _ := auth.GenerateDeviceToken()
+	id1, _ := store.RegisterDevice(ctx, account, auth.PlatformMacOS, "fp-A", auth.HashDeviceToken(tok1))
+	id2, _ := store.RegisterDevice(ctx, account, auth.PlatformAndroid, "fp-B", auth.HashDeviceToken(tok2))
+	if id1 == id2 {
+		t.Errorf("distinct fingerprints collapsed onto one device row")
+	}
+}
+
+func TestStore_RegisterDevice_RejectsBadPlatform(t *testing.T) {
+	pool := dbtest.NewPool(t)
+	store := auth.NewStore(pool)
+	ctx := context.Background()
+
+	account, _ := store.FindOrCreateAccountByIdentity(ctx, auth.Identity{
+		Provider: "apple", Subject: "001234.apple",
+	})
+	tok, _ := auth.GenerateDeviceToken()
+	if _, err := store.RegisterDevice(ctx, account, "linux", "fp", auth.HashDeviceToken(tok)); err == nil {
+		t.Error("expected error for invalid platform")
+	}
+}
+
+func TestStore_ResolveDevice_ScopedToAccount(t *testing.T) {
+	pool := dbtest.NewPool(t)
+	store := auth.NewStore(pool)
+	ctx := context.Background()
+
+	macAccount, _ := store.FindOrCreateAccountByIdentity(ctx, auth.Identity{
+		Provider: "apple", Subject: "a-mac",
+	})
+	otherAccount, _ := store.FindOrCreateAccountByIdentity(ctx, auth.Identity{
+		Provider: "google", Subject: "g-other",
+	})
+
+	tok, _ := auth.GenerateDeviceToken()
+	if _, err := store.RegisterDevice(ctx, macAccount, auth.PlatformMacOS, "fp-mac", auth.HashDeviceToken(tok)); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	// Same plaintext, queried against the wrong account, must not resolve.
+	if _, err := store.ResolveDevice(ctx, otherAccount, tok); err != auth.ErrUnknownDevice {
+		t.Errorf("cross-account resolve: err=%v, want ErrUnknownDevice", err)
+	}
+}
+
+func TestStore_ResolveDevice_UnknownToken(t *testing.T) {
+	pool := dbtest.NewPool(t)
+	store := auth.NewStore(pool)
+	ctx := context.Background()
+
+	account, _ := store.FindOrCreateAccountByIdentity(ctx, auth.Identity{
+		Provider: "apple", Subject: "x",
+	})
+
+	if _, err := store.ResolveDevice(ctx, account, "never-issued"); err != auth.ErrUnknownDevice {
+		t.Errorf("got %v, want ErrUnknownDevice", err)
+	}
+}
+
 func TestStore_AccountExists(t *testing.T) {
 	pool := dbtest.NewPool(t)
 	store := auth.NewStore(pool)
