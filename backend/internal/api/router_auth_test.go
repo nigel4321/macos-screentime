@@ -14,7 +14,7 @@ func TestRouter_AuthRoutesDisabledWithoutDeps(t *testing.T) {
 	srv := httptest.NewServer(NewRouter(Deps{}))
 	defer srv.Close()
 
-	for _, path := range []string{"/v1/auth/apple", "/v1/auth/google", "/v1/account:pair-init", "/v1/devices/register"} {
+	for _, path := range []string{"/v1/auth/apple", "/v1/auth/google", "/v1/account:pair-init", "/v1/devices/register", "/v1/usage:batchUpload"} {
 		resp, err := http.Post(srv.URL+path, "application/json", strings.NewReader("{}"))
 		if err != nil {
 			t.Fatalf("POST %s: %v", path, err)

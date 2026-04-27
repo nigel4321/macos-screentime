@@ -21,6 +21,7 @@ import (
 	"github.com/nigel4321/macos-screentime/backend/internal/auth"
 	"github.com/nigel4321/macos-screentime/backend/internal/config"
 	"github.com/nigel4321/macos-screentime/backend/internal/db"
+	"github.com/nigel4321/macos-screentime/backend/internal/usage"
 )
 
 const (
@@ -59,7 +60,7 @@ func run() error {
 			return err
 		}
 		defer pool.Close()
-		if err := db.EnsureCurrentAndNextMonthPartitions(ctx, pool, time.Now().UTC()); err != nil {
+		if err := db.EnsurePartitionsAroundNow(ctx, pool, time.Now().UTC()); err != nil {
 			return err
 		}
 		logger.Info("database ready", "migrations", "applied", "partitions", "ensured")
@@ -73,6 +74,7 @@ func run() error {
 		// in a Pinger interface compares non-nil and would crash on
 		// Ping. Only assign when we actually have a pool.
 		deps.DB = pool
+		deps.UsageStore = usage.NewStore(pool)
 	}
 	if pool != nil && cfg.JWTSigningKey != "" {
 		signer, err := auth.NewSigner([]byte(cfg.JWTSigningKey))

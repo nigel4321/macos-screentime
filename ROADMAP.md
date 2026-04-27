@@ -164,12 +164,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Handler tests *(unit + integration: register, idempotent rotation, cross-account isolation, validation)*
 
 ### 2.5 Backend: `POST /v1/usage:batchUpload`
-- [ ] Route handler accepting batch JSON
-- [ ] Idempotency on client-supplied event id
-- [ ] Validate device owns account
-- [ ] Insert into partitioned table
-- [ ] Return per-event accept/reject
-- [ ] Handler tests including duplicate suppression
+- [x] Route handler accepting batch JSON
+- [x] Idempotency on client-supplied event id *(`UNIQUE (device_id, client_event_id, started_at)` + `ON CONFLICT DO NOTHING`)*
+- [x] Validate device owns account *(via `auth.DeviceContext` middleware: device row is account-scoped at registration time)*
+- [x] Insert into partitioned table *(startup ensures prev/current/next month partitions; validation window stays inside that range)*
+- [x] Return per-event accept/reject *(`accepted` | `duplicate` | `rejected`, in input order)*
+- [x] Handler tests including duplicate suppression *(unit + integration: accepted→duplicate, mixed-batch validation, distinct start times, out-of-window)*
 
 ### 2.6 Backend: `GET /v1/usage:summary`
 - [ ] Accept query params `from`, `to`, `groupBy`

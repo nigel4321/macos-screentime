@@ -41,9 +41,27 @@ func EnsureMonthPartition(ctx context.Context, ex Execer, anyTimeInMonth time.Ti
 	return nil
 }
 
-// EnsureCurrentAndNextMonthPartitions is the convenience caller for
-// startup: it provisions the partition for "now" and the one after, so
-// inserts crossing the month boundary do not fail at midnight UTC.
+// EnsurePartitionsAroundNow is the convenience caller for startup: it
+// provisions the partitions covering the previous, current, and next
+// calendar months. The previous-month partition matters because client
+// uploads accept events with started_at up to a week in the past
+// (see usage.AcceptStartedAtFloor), and that window crosses the month
+// boundary in the first week of every month.
+func EnsurePartitionsAroundNow(ctx context.Context, ex Execer, now time.Time) error {
+	if err := EnsureMonthPartition(ctx, ex, now.AddDate(0, -1, 0)); err != nil {
+		return err
+	}
+	if err := EnsureMonthPartition(ctx, ex, now); err != nil {
+		return err
+	}
+	return EnsureMonthPartition(ctx, ex, now.AddDate(0, 1, 0))
+}
+
+// EnsureCurrentAndNextMonthPartitions is the older form retained for
+// callers that only need current+next coverage. New code should prefer
+// EnsurePartitionsAroundNow.
+//
+// Deprecated: use EnsurePartitionsAroundNow.
 func EnsureCurrentAndNextMonthPartitions(ctx context.Context, ex Execer, now time.Time) error {
 	if err := EnsureMonthPartition(ctx, ex, now); err != nil {
 		return err

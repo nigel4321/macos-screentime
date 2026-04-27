@@ -29,6 +29,8 @@ type Deps struct {
 	// generator. Leave nil in production; tests inject a deterministic
 	// minter when they need to assert exact response payloads.
 	DeviceTokenMinter DeviceTokenMinter
+	// UsageStore backs /v1/usage:batchUpload. nil disables the route.
+	UsageStore UsageStore
 }
 
 // NewRouter constructs the public HTTP router with default middleware
@@ -66,6 +68,17 @@ func NewRouter(d Deps) http.Handler {
 					PairCompleteHandler(d.Store, d.JWTSigner))
 				r.Method(http.MethodPost, "/v1/devices/register",
 					DevicesRegisterHandler(d.Store, minter))
+
+				// Sub-group for routes that additionally require a
+				// resolved device — DeviceContext reads X-Device-Token
+				// and stashes the device id on the request context.
+				if d.UsageStore != nil {
+					r.Group(func(r chi.Router) {
+						r.Use(auth.DeviceContext(d.Store))
+						r.Method(http.MethodPost, "/v1/usage:batchUpload",
+							BatchUploadHandler(d.UsageStore))
+					})
+				}
 			})
 		}
 	}
