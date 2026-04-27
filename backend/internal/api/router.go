@@ -13,6 +13,11 @@ import (
 // routes. A nil DB or nil auth dependencies disable the routes that
 // require them, which keeps tests and dev-without-Postgres flows
 // simple.
+//
+// IMPORTANT: assign DB only with a non-nil concrete pointer. A typed
+// nil (e.g. `(*pgxpool.Pool)(nil)`) stored here becomes a non-nil
+// interface and crashes the /healthz Ping. Either leave DB as the zero
+// value or assign through `if pool != nil { d.DB = pool }`.
 type Deps struct {
 	DB             Pinger
 	Store          *auth.Store

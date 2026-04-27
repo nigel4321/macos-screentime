@@ -25,3 +25,20 @@ func TestRouter_AuthRoutesDisabledWithoutDeps(t *testing.T) {
 		}
 	}
 }
+
+// TestRouter_HealthzWithEmptyDeps exercises the no-DB code path
+// end-to-end through the router. Regression for the typed-nil gotcha
+// that crashed live /healthz when Deps.DB held a nil *pgxpool.Pool.
+func TestRouter_HealthzWithEmptyDeps(t *testing.T) {
+	srv := httptest.NewServer(NewRouter(Deps{}))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/healthz")
+	if err != nil {
+		t.Fatalf("GET /healthz: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("status: got %d, want 200", resp.StatusCode)
+	}
+}

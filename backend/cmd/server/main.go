@@ -67,7 +67,13 @@ func run() error {
 		logger.Warn("DATABASE_URL not set — running without Postgres (dev only)")
 	}
 
-	deps := api.Deps{DB: pool}
+	deps := api.Deps{}
+	if pool != nil {
+		// Assign through the typed-nil dance: a nil *pgxpool.Pool stored
+		// in a Pinger interface compares non-nil and would crash on
+		// Ping. Only assign when we actually have a pool.
+		deps.DB = pool
+	}
 	if pool != nil && cfg.JWTSigningKey != "" {
 		signer, err := auth.NewSigner([]byte(cfg.JWTSigningKey))
 		if err != nil {
