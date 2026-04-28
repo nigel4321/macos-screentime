@@ -53,7 +53,7 @@ func TestAuthenticator_RejectsMissingHeader(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rr := httptest.NewRecorder()
 
-	mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	mw(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("handler should not run")
 	})).ServeHTTP(rr, req)
 
@@ -154,7 +154,7 @@ func TestDeviceContext_PassesThroughWhenHeaderMissing(t *testing.T) {
 	mw := DeviceContext(stubResolver{err: errors.New("should not be called")})
 
 	called := false
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	next := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		called = true
 		if id := DeviceIDFromContext(r.Context()); id != "" {
 			t.Errorf("expected empty device id, got %q", id)

@@ -4,5 +4,7 @@ package migrations
 
 import "embed"
 
+// FS is the embedded SQL migration tree consumed by goose.
+//
 //go:embed *.sql
 var FS embed.FS

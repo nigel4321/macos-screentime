@@ -1,3 +1,5 @@
+// Package config loads runtime configuration from environment
+// variables with sensible defaults for local development.
 package config
 
 import (

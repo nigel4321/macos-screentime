@@ -21,6 +21,7 @@ type Event struct {
 // EventStatus is the per-event outcome returned to the client.
 type EventStatus string
 
+// EventStatus values reported per input event.
 const (
 	StatusAccepted  EventStatus = "accepted"  // newly inserted
 	StatusDuplicate EventStatus = "duplicate" // already present (idempotent suppression)

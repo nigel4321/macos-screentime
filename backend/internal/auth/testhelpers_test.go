@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"crypto/rsa"
 	"crypto/rand"
+	"crypto/rsa"
 	"testing"
 )
 
