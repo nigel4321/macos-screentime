@@ -38,8 +38,14 @@ func TestEvent_Validate_Rules(t *testing.T) {
 		{"zero ended_at", func(e *Event) { e.EndedAt = time.Time{} }, ErrZeroEndedAt},
 		{"end before start", func(e *Event) { e.EndedAt = e.StartedAt.Add(-time.Second) }, ErrEndBeforeStart},
 		{"duration too long", func(e *Event) { e.EndedAt = e.StartedAt.Add(MaxEventDuration + time.Second) }, ErrTooLong},
-		{"started_at too old", func(e *Event) { e.StartedAt = now.Add(AcceptStartedAtFloor - time.Hour); e.EndedAt = e.StartedAt.Add(time.Minute) }, ErrStartedAtOutOfRange},
-		{"started_at too future", func(e *Event) { e.StartedAt = now.Add(AcceptStartedAtCeil + time.Hour); e.EndedAt = e.StartedAt.Add(time.Minute) }, ErrStartedAtOutOfRange},
+		{"started_at too old", func(e *Event) {
+			e.StartedAt = now.Add(AcceptStartedAtFloor - time.Hour)
+			e.EndedAt = e.StartedAt.Add(time.Minute)
+		}, ErrStartedAtOutOfRange},
+		{"started_at too future", func(e *Event) {
+			e.StartedAt = now.Add(AcceptStartedAtCeil + time.Hour)
+			e.EndedAt = e.StartedAt.Add(time.Minute)
+		}, ErrStartedAtOutOfRange},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
