@@ -1,3 +1,5 @@
+// Package api wires the public HTTP surface: middleware, route
+// table, and request/response handlers for /v1/* endpoints.
 package api
 
 import (

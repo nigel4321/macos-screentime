@@ -89,6 +89,7 @@ var ErrNoEvents = errors.New("usage: no events in batch")
 // SummaryGroup is one axis a Summarise query can group on.
 type SummaryGroup string
 
+// SummaryGroup axes accepted by Summarise.
 const (
 	GroupByBundle SummaryGroup = "bundle"
 	GroupByDay    SummaryGroup = "day"
@@ -201,4 +202,3 @@ func (s *Store) Summarise(ctx context.Context, q SummaryQuery) ([]SummaryRow, er
 	}
 	return out, nil
 }
-

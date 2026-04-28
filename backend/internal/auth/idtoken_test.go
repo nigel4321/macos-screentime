@@ -36,8 +36,8 @@ func newIDPFixture(t *testing.T) *idpFixture {
 					"kid": f.kid,
 					"alg": "RS256",
 					"use": "sig",
-					"n":   base64.RawURLEncoding.EncodeToString(f.priv.PublicKey.N.Bytes()),
-					"e":   base64.RawURLEncoding.EncodeToString(big2Bytes(int64(f.priv.PublicKey.E))),
+					"n":   base64.RawURLEncoding.EncodeToString(f.priv.N.Bytes()),
+					"e":   base64.RawURLEncoding.EncodeToString(big2Bytes(int64(f.priv.E))),
 				},
 			},
 		})

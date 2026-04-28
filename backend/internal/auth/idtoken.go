@@ -20,11 +20,11 @@ type Identity struct {
 // IDTokenVerifier verifies a third-party identity token (Apple/Google)
 // against a JWKS, with provider-specific iss/aud checks.
 type IDTokenVerifier struct {
-	provider     string
-	jwks         *JWKSCache
-	allowedIss   []string
-	audience     string
-	allowedAlgs  []string
+	provider    string
+	jwks        *JWKSCache
+	allowedIss  []string
+	audience    string
+	allowedAlgs []string
 }
 
 // NewAppleVerifier wraps a JWKS cache pointed at Apple's keys URL with
