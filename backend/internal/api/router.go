@@ -69,6 +69,12 @@ func NewRouter(d Deps) http.Handler {
 				r.Method(http.MethodPost, "/v1/devices/register",
 					DevicesRegisterHandler(d.Store, minter))
 
+				// Stub policy endpoint — empty v0 until persistence
+				// lands in M3. No deps; auth is enforced by the
+				// surrounding Authenticator group.
+				r.Method(http.MethodGet, "/v1/policy/current",
+					PolicyCurrentHandler())
+
 				if d.UsageStore != nil {
 					// Summary spans all of the account's devices, so it
 					// only needs Authenticator — no X-Device-Token.
