@@ -1,0 +1,10 @@
+bin/
+*.test
+*.out
+.golangci.yml
+Makefile
+README.md
+.git
+.github
+.idea
+.vscode
