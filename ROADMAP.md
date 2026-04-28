@@ -184,7 +184,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 2.8 Backend CI
 - [x] `.github/workflows/backend.yml` with path filter `backend/**`
-- [x] Postgres service container *(postgres:16, healthcheck-gated)*
+- [x] Postgres service container *(postgres:17, healthcheck-gated; matches Fly's `postgres-flex:17.x` runtime)*
 - [x] `go vet`, `go test`, `golangci-lint`
 - [x] Cache Go modules *(via `actions/setup-go@v5` built-in cache)*
 
