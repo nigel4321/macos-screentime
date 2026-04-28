@@ -179,8 +179,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Handler tests *(unit: success, no-grouping, both axes, unauth, bad params, store error; integration: total + by-bundle, by-day, cross-account, empty range)*
 
 ### 2.7 Backend: `GET /v1/policy/current` (stub)
-- [ ] Route handler returning empty policy v0
-- [ ] Handler test
+- [x] Route handler returning empty policy v0 *(`{version:0, app_limits:[], downtime_windows:[], block_list:[]}`; mounted under Authenticator group, no DB deps until M3 persistence lands)*
+- [x] Handler test *(unit: success, empty arrays vs null on the wire, 401 unauth; router test confirms route is disabled when JWTVerifier is absent)*
 
 ### 2.8 Backend CI
 - [x] `.github/workflows/backend.yml` with path filter `backend/**`

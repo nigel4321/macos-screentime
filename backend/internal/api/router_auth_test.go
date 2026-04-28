@@ -24,13 +24,18 @@ func TestRouter_AuthRoutesDisabledWithoutDeps(t *testing.T) {
 			t.Errorf("%s: got %d, want 404 (route should be disabled)", path, resp.StatusCode)
 		}
 	}
-	resp, err := http.Get(srv.URL + "/v1/usage:summary?from=2026-04-01T00:00:00Z&to=2026-04-02T00:00:00Z")
-	if err != nil {
-		t.Fatalf("GET /v1/usage:summary: %v", err)
-	}
-	_ = resp.Body.Close()
-	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("/v1/usage:summary: got %d, want 404 (route should be disabled)", resp.StatusCode)
+	for _, path := range []string{
+		"/v1/usage:summary?from=2026-04-01T00:00:00Z&to=2026-04-02T00:00:00Z",
+		"/v1/policy/current",
+	} {
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatalf("GET %s: %v", path, err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("%s: got %d, want 404 (route should be disabled)", path, resp.StatusCode)
+		}
 	}
 }
 
