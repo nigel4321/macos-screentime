@@ -3,17 +3,21 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/nigel4321/macos-screentime/backend/internal/auth"
 	"github.com/nigel4321/macos-screentime/backend/internal/usage"
 )
 
-// UsageStore is the persistence surface BatchUploadHandler needs.
+// UsageStore is the persistence surface the usage handlers need.
 // usage.Store satisfies it; tests substitute a fake.
 type UsageStore interface {
 	InsertEvents(ctx context.Context, deviceID string, events []usage.Event) ([]usage.EventResult, error)
+	Summarise(ctx context.Context, q usage.SummaryQuery) ([]usage.SummaryRow, error)
 }
 
 // MaxBatchSize caps the number of events a single batchUpload request
@@ -75,5 +79,84 @@ func BatchUploadHandler(store UsageStore) http.Handler {
 			return
 		}
 		writeJSON(w, http.StatusOK, batchUploadResponse{Results: results})
+	})
+}
+
+type summaryResponse struct {
+	Results []usage.SummaryRow `json:"results"`
+}
+
+// MaxSummaryRange caps the [from, to) span a single summary request may
+// cover. Bounded so a runaway dashboard query cannot scan years of data.
+// 90 days is more than enough for the views planned in milestone 3
+// (today + last-week) with comfortable headroom.
+const MaxSummaryRange = 90 * 24 * time.Hour
+
+// UsageSummaryHandler returns aggregate screen-time durations for the
+// account on the request context, optionally bucketed by bundle and/or
+// day. The Authenticator middleware is sufficient — there is no
+// X-Device-Token requirement because the summary spans all of the
+// account's devices. The store enforces ownership via the device join.
+//
+// Query params:
+//   - from, to: RFC3339 timestamps. Range is half-open [from, to).
+//   - groupBy:  optional, comma-separated subset of {bundle, day}.
+func UsageSummaryHandler(store UsageStore) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accountID := auth.AccountIDFromContext(r.Context())
+		if accountID == "" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		q := r.URL.Query()
+		from, err := time.Parse(time.RFC3339, q.Get("from"))
+		if err != nil {
+			http.Error(w, "invalid from", http.StatusBadRequest)
+			return
+		}
+		to, err := time.Parse(time.RFC3339, q.Get("to"))
+		if err != nil {
+			http.Error(w, "invalid to", http.StatusBadRequest)
+			return
+		}
+		if !to.After(from) {
+			http.Error(w, "to must be after from", http.StatusBadRequest)
+			return
+		}
+		if to.Sub(from) > MaxSummaryRange {
+			http.Error(w, "range too large", http.StatusBadRequest)
+			return
+		}
+
+		var groupBy []usage.SummaryGroup
+		if raw := strings.TrimSpace(q.Get("groupBy")); raw != "" {
+			for _, part := range strings.Split(raw, ",") {
+				switch g := usage.SummaryGroup(strings.TrimSpace(part)); g {
+				case usage.GroupByBundle, usage.GroupByDay:
+					groupBy = append(groupBy, g)
+				default:
+					http.Error(w, "invalid groupBy", http.StatusBadRequest)
+					return
+				}
+			}
+		}
+
+		rows, err := store.Summarise(r.Context(), usage.SummaryQuery{
+			AccountID: accountID,
+			From:      from,
+			To:        to,
+			GroupBy:   groupBy,
+		})
+		if err != nil {
+			if errors.Is(err, usage.ErrInvalidRange) {
+				http.Error(w, "invalid range", http.StatusBadRequest)
+				return
+			}
+			slog.ErrorContext(r.Context(), "summarise", "err", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, summaryResponse{Results: rows})
 	})
 }

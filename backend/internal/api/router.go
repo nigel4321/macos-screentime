@@ -69,6 +69,13 @@ func NewRouter(d Deps) http.Handler {
 				r.Method(http.MethodPost, "/v1/devices/register",
 					DevicesRegisterHandler(d.Store, minter))
 
+				if d.UsageStore != nil {
+					// Summary spans all of the account's devices, so it
+					// only needs Authenticator — no X-Device-Token.
+					r.Method(http.MethodGet, "/v1/usage:summary",
+						UsageSummaryHandler(d.UsageStore))
+				}
+
 				// Sub-group for routes that additionally require a
 				// resolved device — DeviceContext reads X-Device-Token
 				// and stashes the device id on the request context.

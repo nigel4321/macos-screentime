@@ -172,11 +172,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Handler tests including duplicate suppression *(unit + integration: accepted→duplicate, mixed-batch validation, distinct start times, out-of-window)*
 
 ### 2.6 Backend: `GET /v1/usage:summary`
-- [ ] Accept query params `from`, `to`, `groupBy`
-- [ ] SQL: sum durations grouped by bundleId and/or day
-- [ ] Return JSON aggregates
-- [ ] Enforce account ownership of devices in query
-- [ ] Handler tests
+- [x] Accept query params `from`, `to`, `groupBy` *(RFC3339 bounds; `groupBy` comma-separated; range capped at 90 days)*
+- [x] SQL: sum durations grouped by bundleId and/or day *(dynamic SELECT/GROUP BY; day bucketed via `date_trunc('day', started_at AT TIME ZONE 'UTC')`)*
+- [x] Return JSON aggregates *(`{"results":[{bundle_id?, day?, duration_seconds}]}`; no-grouping returns single total row)*
+- [x] Enforce account ownership of devices in query *(JOIN device d ON d.id = ue.device_id WHERE d.account_id = $1; cross-account isolation covered by integration test)*
+- [x] Handler tests *(unit: success, no-grouping, both axes, unauth, bad params, store error; integration: total + by-bundle, by-day, cross-account, empty range)*
 
 ### 2.7 Backend: `GET /v1/policy/current` (stub)
 - [ ] Route handler returning empty policy v0
