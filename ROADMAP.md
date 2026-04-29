@@ -206,7 +206,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 2.11 Android: project setup
 - [ ] Init `android-app/` Gradle project
-- [ ] Kotlin 2.1, AGP 8.9, JDK 21 toolchain, `minSdk 26`, `compileSdk 36`, `targetSdk 36`
+- [ ] Kotlin 2.1, AGP 8.13, Gradle 8.13, JDK 21 toolchain, `minSdk 26`, `compileSdk 36`, `targetSdk 36`
 - [ ] Compose BOM, Material 3
 - [ ] Hilt plugin + dependencies
 - [ ] Retrofit, OkHttp, kotlinx.serialization
