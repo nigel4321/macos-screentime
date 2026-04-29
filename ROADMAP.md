@@ -230,12 +230,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] Wire Hilt across modules (`@HiltAndroidApp` in `:app`, `@AndroidEntryPoint` per Activity, per-module `@Module` shells)
 
 ### 2.13 Android: network layer
-- [ ] Retrofit service interface for v1 endpoints
-- [ ] Auth interceptor adding JWT
-- [ ] 401 handler triggering token refresh
-- [ ] JSON serializers for shared DTOs
-- [ ] Repository classes in `:core-data`
-- [ ] Unit tests against MockWebServer
+- [ ] Retrofit `ScreentimeApi` interface for v1 endpoints (`/v1/auth/google`, `/v1/account:pair-complete`, `/v1/usage:summary`, `/v1/policy/current`)
+- [ ] `AuthInterceptor` adding `Authorization: Bearer <jwt>` (skipped when token is absent)
+- [ ] `AuthAuthenticator` for 401 — clears token, flips `TokenStore.authState` to `Anonymous` so the UI re-routes to sign-in *(backend has no refresh-token endpoint by design — re-auth goes through Google Sign-In again)*
+- [ ] `kotlinx.serialization` `@Serializable` DTOs in `:core-data` + DTO→domain mappers; domain types live in `:core-domain`
+- [ ] `AuthRepository`, `UsageRepository`, `PolicyRepository` in `:core-data`
+- [ ] MockWebServer unit tests covering API round-trip, interceptor header, 401 → token-clear, repository mapping
 
 ### 2.14 Android: local cache
 - [ ] Room DB in `:core-data`
@@ -280,7 +280,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 2.19 Android CI — extension
 *Foundational CI (workflow file, ktlint, detekt, assembleDebug, Gradle cache) lands in §2.11 so PRs are gated from §2.12 onward. This section adds the bits that depend on later milestones.*
-- [ ] CI runs unit tests for `:core-domain` and `:core-data` *(requires §2.12 module split + §2.13/§2.14 test code)*
+- [x] CI runs unit tests for `:core-domain` and `:core-data` *(workflow `Unit tests` step added in §2.13; §2.14 will plug in Room cache tests)*
 - [ ] Compose UI tests (or document deferral) *(requires §2.17/§2.18 dashboard tests)*
 - [ ] CI runs `assembleRelease` *(requires keystore + signing config from §2.20)*
 
