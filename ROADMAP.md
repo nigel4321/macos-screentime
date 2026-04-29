@@ -220,14 +220,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Gradle cache via `gradle/actions/setup-gradle`
 
 ### 2.12 Android: module split
-- [ ] `build-logic` includedBuild with convention plugins (`screentime.android.application(.compose)`, `screentime.android.library(.compose)`, `screentime.android.feature`, `screentime.kotlin.library`) so each module's `build.gradle.kts` is a thin plugin/dependency block
-- [ ] `:app` (Compose entry, NavHost, DI root) — uses `screentime.android.application.compose`
-- [ ] `:core-domain` (pure Kotlin) — uses `screentime.kotlin.library`
-- [ ] `:core-data` (Retrofit + Room + repositories) — uses `screentime.android.library` + Hilt
-- [ ] `:core-ui` (Material 3 theme + `dynamicColorScheme`, bento tile composables, glass-surface helpers, motion utilities, haptics) — uses `screentime.android.library.compose`
-- [ ] `:feature-onboarding` — uses `screentime.android.feature`
-- [ ] `:feature-dashboard` — uses `screentime.android.feature`
-- [ ] Wire Hilt across modules (`@HiltAndroidApp` in `:app`, `@AndroidEntryPoint` per Activity, per-module `@Module` shells)
+- [x] `build-logic` includedBuild with convention plugins (`screentime.android.application(.compose)`, `screentime.android.library(.compose)`, `screentime.android.feature`, `screentime.kotlin.library`) so each module's `build.gradle.kts` is a thin plugin/dependency block
+- [x] `:app` (Compose entry, NavHost, DI root) — uses `screentime.android.application.compose`
+- [x] `:core-domain` (pure Kotlin) — uses `screentime.kotlin.library`
+- [x] `:core-data` (Retrofit + Room + repositories) — uses `screentime.android.library` + Hilt
+- [x] `:core-ui` (Material 3 theme + `dynamicColorScheme`, bento tile composables, glass-surface helpers, motion utilities, haptics) — uses `screentime.android.library.compose`
+- [x] `:feature-onboarding` — uses `screentime.android.feature`
+- [x] `:feature-dashboard` — uses `screentime.android.feature`
+- [x] Wire Hilt across modules (`@HiltAndroidApp` in `:app`, `@AndroidEntryPoint` per Activity, per-module `@Module` shells)
 
 ### 2.13 Android: network layer
 - [ ] Retrofit service interface for v1 endpoints
