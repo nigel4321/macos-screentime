@@ -206,7 +206,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 2.11 Android: project setup
 - [ ] Init `android-app/` Gradle project
-- [ ] Kotlin 2.0, AGP latest, `minSdk 26`, `targetSdk 34`
+- [ ] Kotlin 2.1, AGP 8.13, Gradle 8.13, JDK 21 toolchain, `minSdk 26`, `compileSdk 36`, `targetSdk 36`
 - [ ] Compose BOM, Material 3
 - [ ] Hilt plugin + dependencies
 - [ ] Retrofit, OkHttp, kotlinx.serialization
@@ -215,6 +215,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] ktlint plugin
 - [ ] detekt plugin
 - [ ] Version catalog in `libs.versions.toml`
+- [ ] `.github/workflows/android.yml` with path filter `android-app/**` *(foundational CI pulled forward from §2.19 so PRs from §2.12+ are gated)*
+- [ ] CI runs `ktlintCheck`, `detekt`, `assembleDebug`
+- [ ] Gradle cache via `gradle/actions/setup-gradle`
 
 ### 2.12 Android: module split
 - [ ] `:app` (Compose entry, navigation, DI)
@@ -267,13 +270,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] Tab navigation between Today and Week
 - [ ] Compose UI tests
 
-### 2.19 Android CI
-- [ ] `.github/workflows/android.yml`
-- [ ] ktlint, detekt
-- [ ] Unit tests in `:core-domain`, `:core-data`
-- [ ] Compose UI tests (or document deferral)
-- [ ] Assemble debug + release
-- [ ] Gradle cache
+### 2.19 Android CI — extension
+*Foundational CI (workflow file, ktlint, detekt, assembleDebug, Gradle cache) lands in §2.11 so PRs are gated from §2.12 onward. This section adds the bits that depend on later milestones.*
+- [ ] CI runs unit tests for `:core-domain` and `:core-data` *(requires §2.12 module split + §2.13/§2.14 test code)*
+- [ ] Compose UI tests (or document deferral) *(requires §2.17/§2.18 dashboard tests)*
+- [ ] CI runs `assembleRelease` *(requires keystore + signing config from §2.20)*
 
 ### 2.20 Android release via Fastlane
 - [ ] `fastlane/` under `android-app/`
