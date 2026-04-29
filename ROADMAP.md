@@ -197,12 +197,24 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Smoke-test script hitting `/healthz` *(`scripts/smoke-deploy.sh`, asserts `"status":"ok"` JSON)*
 
 ### 2.10 Mac agent: SyncClient
-- [ ] Add `SyncClient` product to Core
-- [ ] Device-registration flow, token stored in Keychain
-- [ ] `BatchUploader` reading unsynced events
-- [ ] Exponential backoff with jitter
-- [ ] Test against a local Vapor mock server
-- [ ] Wire into app lifecycle (periodic flush + on-quit flush)
+- [x] Add `SyncClient` product to Core
+- [x] Device-registration flow, token stored in Keychain *(`KeychainCredentialStore` uses the data-protection keychain so reads never block on user authorization)*
+- [x] `BatchUploader` reading unsynced events *(paged at backend's `MaxBatchSize=500`; accepted/duplicate/rejected all mark synced)*
+- [x] Exponential backoff with jitter *(full-jitter; 5xx + transport retry, 4xx/decoding/missing-creds do not)*
+- [x] Test against a `URLProtocol`-based local mock (no Vapor dep)
+- [x] Wire into app lifecycle (periodic flush + on-quit flush) *(60s timer; quit replaces SwiftUI's default to call `await container.flush()`)*
+- [x] LocalStore schema v2: add `client_event_id` to `usage_event` (required by backend's `(device_id, client_event_id, started_at)` idempotency contract)
+
+> **§2.10 ships an offline-capable SyncClient** that no-ops gracefully when no JWT is present. It cannot actually push events end-to-end until §2.10a lands.
+
+### 2.10a Mac agent: Apple Sign-In *(mac-only)*
+- [ ] `AuthenticationServices` `Sign in with Apple` button on `OnboardingView`
+- [ ] `ASAuthorizationController` flow → Apple identity token
+- [ ] Exchange identity token for backend JWT via `POST /v1/auth/apple`
+- [ ] Persist JWT in Keychain via the `CredentialStore` from §2.10
+- [ ] First-launch flow: sign in → register device → start periodic flush
+- [ ] Sign-out menubar action (clears JWT + device token)
+- [ ] Tests with a fake `ASAuthorizationController` and `URLProtocol` mock backend
 
 ### 2.11 Android: project setup
 - [x] Init `android-app/` Gradle project

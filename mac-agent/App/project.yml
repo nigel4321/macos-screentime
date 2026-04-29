@@ -38,6 +38,8 @@ targets:
         product: LocalStore
       - package: MacAgentCore
         product: UsageCollector
+      - package: MacAgentCore
+        product: SyncClient
     info:
       path: Info.plist
       properties:
