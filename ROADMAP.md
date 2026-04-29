@@ -247,15 +247,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Tests: Robolectric `UsageSummaryDaoTest` exercising real Room schema; `UsageRepositoryTest` with `FakeUsageSummaryDao` + MockWebServer covering cache-miss, refresh-replace, TTL boundaries, purge
 
 ### 2.15 Android: onboarding
-- [ ] `GoogleSignInClient` interface in `:feature-onboarding` + `CredentialManagerGoogleSignInClient` (Credential Manager + `GetGoogleIdOption`); `GOOGLE_WEB_CLIENT_ID` BuildConfig sourced from `SCREENTIME_GOOGLE_WEB_CLIENT_ID` env var or `screentime.googleWebClientId` Gradle property
+- [x] `GoogleSignInClient` interface in `:feature-onboarding` + `CredentialManagerGoogleSignInClient` (Credential Manager + `GetGoogleIdOption`); `GOOGLE_WEB_CLIENT_ID` BuildConfig sourced from `SCREENTIME_GOOGLE_WEB_CLIENT_ID` env var or `screentime.googleWebClientId` Gradle property
 - [x] `AuthRepository.signInWithGoogle(idToken)` exchanges Google ID token for backend JWT *(landed in §2.13; reused here)*
-- [ ] `EncryptedSharedPreferencesTokenStore` (AES-256-GCM master key, AES256_SIV keys / AES256_GCM values) replaces `InMemoryTokenStore` as the production `@Binds` in `AuthModule`
-- [ ] `TokenStore.authState: StateFlow<AuthState>` seeded from disk at construction *(survives process death)*
-- [ ] Sign-out via `AuthRepository.signOut()` clears the persisted JWT and flips `authState` to `Anonymous`
-- [ ] `OnboardingViewModel` (Hilt) with state machine `Idle / Loading / Error / Authenticated`; combines transient sign-in state with `TokenStore.authState`
-- [ ] `OnboardingScreen` Compose UI: hero copy, "Sign in with Google" button, loading spinner, error banner with retry; uses `LocalContext` to walk to the hosting `Activity` for Credential Manager
-- [ ] App-level auth gate: `AuthGateViewModel` in `:app` collects `TokenStore.authState`; `MainActivity` `NavHost` start destination flips between `onboarding` ↔ `today` and re-routes on sign-in/sign-out
-- [ ] Tests: `OnboardingViewModelTest` (Mockito + `FakeGoogleSignInClient` + MockWebServer) covering Idle→Loading→Authenticated, Google failure → Error, backend 401 → Error, dismissError, initial-Authenticated. *(Encrypted store round-trip deferred to instrumented tests in §2.19 — Robolectric doesn't shim AndroidKeyStore.)*
+- [x] `EncryptedSharedPreferencesTokenStore` (AES-256-GCM master key, AES256_SIV keys / AES256_GCM values) replaces `InMemoryTokenStore` as the production `@Binds` in `AuthModule`
+- [x] `TokenStore.authState: StateFlow<AuthState>` seeded from disk at construction *(survives process death)*
+- [x] Sign-out via `AuthRepository.signOut()` clears the persisted JWT and flips `authState` to `Anonymous`
+- [x] `OnboardingViewModel` (Hilt) with state machine `Idle / Loading / Error / Authenticated`; combines transient sign-in state with `TokenStore.authState`
+- [x] `OnboardingScreen` Compose UI: hero copy, "Sign in with Google" button, loading spinner, error banner with retry; uses `LocalContext` to walk to the hosting `Activity` for Credential Manager
+- [x] App-level auth gate: `AuthGateViewModel` in `:app` collects `TokenStore.authState`; `MainActivity` `NavHost` start destination flips between `onboarding` ↔ `today` and re-routes on sign-in/sign-out
+- [x] Tests: `OnboardingViewModelTest` (Mockito + `FakeGoogleSignInClient` + MockWebServer) covering Idle→Loading→Authenticated, Google failure → Error, backend 401 → Error, dismissError, initial-Authenticated. *(Encrypted store round-trip deferred to instrumented tests in §2.19 — Robolectric doesn't shim AndroidKeyStore.)*
 
 ### 2.16 Android: device pairing
 - [ ] Fetch registered devices for account
