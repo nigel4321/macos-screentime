@@ -238,11 +238,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] MockWebServer unit tests covering API round-trip, interceptor header, 401 → token-clear, repository mapping
 
 ### 2.14 Android: local cache
-- [ ] Room DB in `:core-data`
-- [ ] `UsageSummaryEntity` table
-- [ ] DAOs
-- [ ] Cache-first, network-refresh repository pattern
-- [ ] Cache-invalidation rules
+- [ ] `ScreentimeDatabase` (Room) in `:core-data` with KSP-generated impl, schema export to `core-data/schemas/`
+- [ ] `UsageSummaryRowEntity` (single table keyed by `cache_key` + indexed; auto-id, `cached_at` epoch millis)
+- [ ] `UsageSummaryDao` — `observeByCacheKey` (Flow), `cachedAt`, `replace` (transactional wipe-and-insert), `deleteOlderThan`, `insertAll`
+- [ ] `UsageRepository` cache-first / network-refresh: `summary()` returns `Flow<UsageSummary>` from cache; `refresh()` fetches and replaces; `isStale()` reports against injected `Clock` and `DEFAULT_TTL = 5.minutes`
+- [ ] Cache invalidation rules: per-key wipe-and-replace on refresh, TTL on read, global `purgeOlderThan` for app-launch sweep
+- [ ] `DatabaseModule` (Hilt) provides `ScreentimeDatabase`, `UsageSummaryDao`, and a `Clock` singleton
+- [ ] Tests: Robolectric `UsageSummaryDaoTest` exercising real Room schema; `UsageRepositoryTest` with `FakeUsageSummaryDao` + MockWebServer covering cache-miss, refresh-replace, TTL boundaries, purge
 
 ### 2.15 Android: onboarding
 - [ ] Google Sign-In via Credential Manager
