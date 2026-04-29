@@ -13,7 +13,9 @@ public enum LoginItemStatus: Equatable, Sendable {
     /// Not registered — either never registered, or unregistered.
     case notRegistered
     /// User disabled the item in System Settings → General → Login Items.
-    /// We respect this and never silently re-enable it.
+    /// macOS keeps the user's choice authoritative; calling `register()`
+    /// from the app will not flip this back to `.enabled` until the user
+    /// re-approves in System Settings. We log and move on.
     case requiresApproval
     /// Registry returned a status we don't model. Treat as not-enabled.
     case unknown
@@ -25,69 +27,32 @@ public enum LoginItemError: Error, Sendable {
     case registryFailed(String)
 }
 
-/// Persistence seam for the "user explicitly disabled this" flag. We use
-/// it to avoid silently re-registering after the user opts out, since the
-/// auto-register path runs on every launch.
-public protocol LoginItemPreferenceStore: Sendable {
-    /// Has `enableOnFirstLaunchIfNeeded` already run? Set to true after
-    /// the first attempt regardless of outcome — we register exactly once
-    /// without explicit user action, then leave it to the toggle.
-    func didAutoRegister() -> Bool
-    func recordAutoRegistered()
-    /// True if the user previously toggled the item off. We never
-    /// auto-register over an explicit disable.
-    func userDisabled() -> Bool
-    func recordUserDisabled()
-    func clearUserDisabled()
-}
-
-/// Production-friendly default backed by `UserDefaults.standard`. Marked
-/// `@unchecked Sendable` because `UserDefaults` is documented as
-/// thread-safe but isn't formally Sendable-typed.
-public struct UserDefaultsLoginItemPreferenceStore: LoginItemPreferenceStore, @unchecked Sendable {
-    private let defaults: UserDefaults
-    private let autoRegisterKey = "loginitem.auto_registered"
-    private let userDisabledKey = "loginitem.user_disabled"
-
-    public init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-    }
-
-    public func didAutoRegister() -> Bool { defaults.bool(forKey: autoRegisterKey) }
-    public func recordAutoRegistered() { defaults.set(true, forKey: autoRegisterKey) }
-    public func userDisabled() -> Bool { defaults.bool(forKey: userDisabledKey) }
-    public func recordUserDisabled() { defaults.set(true, forKey: userDisabledKey) }
-    public func clearUserDisabled() { defaults.removeObject(forKey: userDisabledKey) }
-}
-
 /// The seam that wraps `SMAppService.mainApp`. Production uses the real
 /// service; tests use `InMemoryLoginItemRegistry` so they don't need a
 /// proper `.app` bundle context.
 public protocol LoginItemRegistry: Sendable {
     func currentStatus() -> LoginItemStatus
     func register() throws
-    func unregister() throws
 }
 
-/// Coordinates auto-registration on first launch and the menubar toggle.
-/// Stateless beyond what the injected registry + preference store hold.
+/// Drives launch-at-login. By design there is no in-app opt-out: the agent
+/// only collects events while it's running, so we re-register on every
+/// launch and let macOS handle the rest. The user's only way to disable it
+/// is **System Settings → General → Login Items**, which macOS keeps
+/// authoritative — `register()` cannot override an explicit user disable
+/// (status stays `.requiresApproval` until the user re-approves there).
 public struct LoginItemController: Sendable {
     public let registry: LoginItemRegistry
-    public let preferences: LoginItemPreferenceStore
 
-    public init(registry: LoginItemRegistry, preferences: LoginItemPreferenceStore) {
+    public init(registry: LoginItemRegistry) {
         self.registry = registry
-        self.preferences = preferences
     }
 
     /// Convenience constructor wiring the production `SMAppService`-backed
-    /// registry and `UserDefaults` preference store.
+    /// registry.
     #if canImport(ServiceManagement)
     public static func makeDefault() -> LoginItemController {
-        LoginItemController(
-            registry: SMAppServiceLoginItemRegistry(),
-            preferences: UserDefaultsLoginItemPreferenceStore()
-        )
+        LoginItemController(registry: SMAppServiceLoginItemRegistry())
     }
     #endif
 
@@ -95,38 +60,17 @@ public struct LoginItemController: Sendable {
         registry.currentStatus()
     }
 
-    /// Called from app launch. Registers the app exactly once, ever, and
-    /// only when the user hasn't previously disabled it. Subsequent
-    /// launches are a no-op so we never override the user's choice.
-    public func enableOnFirstLaunchIfNeeded() throws {
-        if preferences.didAutoRegister() { return }
-        if preferences.userDisabled() { return }
-
+    /// Idempotent — call on every launch. No-op when already enabled,
+    /// otherwise registers. Throws `LoginItemError.registryFailed` only on
+    /// unexpected `SMAppService` failures; a `.requiresApproval` outcome
+    /// (user disabled it via System Settings) is *not* an error here, but
+    /// the post-call `status()` will reflect it so the caller can log.
+    public func ensureEnabled() throws {
+        if registry.currentStatus() == .enabled { return }
         do {
             try registry.register()
-            preferences.recordAutoRegistered()
         } catch {
-            // Record the attempt so a misbehaving SMAppService doesn't
-            // make us try forever. The toggle remains available for a
-            // manual retry.
-            preferences.recordAutoRegistered()
             throw LoginItemError.registryFailed(String(describing: error))
-        }
-    }
-
-    /// Called by the menubar toggle. Wraps register/unregister and tracks
-    /// the user-disabled flag so first-launch auto-register can respect it.
-    public func setEnabled(_ enabled: Bool) throws {
-        if enabled {
-            do { try registry.register() } catch {
-                throw LoginItemError.registryFailed(String(describing: error))
-            }
-            preferences.clearUserDisabled()
-        } else {
-            do { try registry.unregister() } catch {
-                throw LoginItemError.registryFailed(String(describing: error))
-            }
-            preferences.recordUserDisabled()
         }
     }
 }
@@ -159,13 +103,6 @@ public struct SMAppServiceLoginItemRegistry: LoginItemRegistry {
         }
         try SMAppService.mainApp.register()
     }
-
-    public func unregister() throws {
-        guard #available(macOS 13, *) else {
-            throw LoginItemError.registryFailed("macOS 13+ required for SMAppService")
-        }
-        try SMAppService.mainApp.unregister()
-    }
 }
 #endif
 
@@ -175,9 +112,7 @@ public struct SMAppServiceLoginItemRegistry: LoginItemRegistry {
 public final class InMemoryLoginItemRegistry: LoginItemRegistry, @unchecked Sendable {
     public private(set) var status: LoginItemStatus
     public var registerError: Error?
-    public var unregisterError: Error?
     public private(set) var registerCalls = 0
-    public private(set) var unregisterCalls = 0
     private let lock = NSLock()
 
     public init(initialStatus: LoginItemStatus = .notRegistered) {
@@ -196,48 +131,8 @@ public final class InMemoryLoginItemRegistry: LoginItemRegistry, @unchecked Send
         status = .enabled
     }
 
-    public func unregister() throws {
-        lock.lock(); defer { lock.unlock() }
-        unregisterCalls += 1
-        if let error = unregisterError { throw error }
-        status = .notRegistered
-    }
-
     public func setStatus(_ status: LoginItemStatus) {
         lock.lock(); defer { lock.unlock() }
         self.status = status
-    }
-}
-
-/// In-memory preference store for unit tests.
-public final class InMemoryLoginItemPreferenceStore: LoginItemPreferenceStore, @unchecked Sendable {
-    private var auto = false
-    private var disabled = false
-    private let lock = NSLock()
-
-    public init(autoRegistered: Bool = false, userDisabled: Bool = false) {
-        self.auto = autoRegistered
-        self.disabled = userDisabled
-    }
-
-    public func didAutoRegister() -> Bool {
-        lock.lock(); defer { lock.unlock() }
-        return auto
-    }
-    public func recordAutoRegistered() {
-        lock.lock(); defer { lock.unlock() }
-        auto = true
-    }
-    public func userDisabled() -> Bool {
-        lock.lock(); defer { lock.unlock() }
-        return disabled
-    }
-    public func recordUserDisabled() {
-        lock.lock(); defer { lock.unlock() }
-        disabled = true
-    }
-    public func clearUserDisabled() {
-        lock.lock(); defer { lock.unlock() }
-        disabled = false
     }
 }

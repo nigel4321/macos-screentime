@@ -44,12 +44,18 @@ final class AppContainer {
             fingerprint: Self.deviceFingerprint()
         )
         loginItem = LoginItemController.makeDefault()
-        // Auto-register exactly once, ever. Failures here are non-fatal —
-        // the menubar toggle is the recovery path.
+        // Launch-at-login is mandatory: re-register on every launch.
+        // ensureEnabled() is idempotent. macOS keeps the user's choice
+        // authoritative if they disable it via System Settings, so this
+        // can leave us in `.requiresApproval` — log it but don't fail.
         do {
-            try loginItem.enableOnFirstLaunchIfNeeded()
+            try loginItem.ensureEnabled()
         } catch {
-            logger.error("login-item auto-register failed: \(String(describing: error), privacy: .public)")
+            logger.error("login-item ensureEnabled failed: \(String(describing: error), privacy: .public)")
+        }
+        let currentStatus = loginItem.status()
+        if currentStatus != .enabled {
+            logger.info("login-item status after ensureEnabled: \(String(describing: currentStatus), privacy: .public)")
         }
         startPeriodicFlush()
     }

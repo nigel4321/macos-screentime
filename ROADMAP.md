@@ -121,11 +121,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Green build on `main`
 
 ### 1.13 Launch at login *(mac-only)*
-*The MacAgent has to be running to collect events; for a parent's machine we want it auto-resumed on every login. macOS treats per-user "start at login" and post-boot launch as the same mechanism, since `NSWorkspace` lives inside a user session — a real boot-time `LaunchDaemon` would run as root before any user logs in and couldn't observe per-user app activations.*
+*The MacAgent has to be running to collect events; for a parent's machine we want it auto-resumed on every login. macOS treats per-user "start at login" and post-boot launch as the same mechanism, since `NSWorkspace` lives inside a user session — a real boot-time `LaunchDaemon` would run as root before any user logs in and couldn't observe per-user app activations. **Launch-at-login is mandatory by design: there is no in-app opt-out.** The user's only way to disable it is **System Settings → General → Login Items**, which macOS keeps authoritative — `register()` cannot override an explicit user disable.*
 - [x] `LoginItem` SPM target with a `LoginItemRegistry` protocol so the menubar code depends on a seam, not directly on `ServiceManagement`
 - [x] `SMAppServiceLoginItemRegistry` production impl (macOS 13+; we target 14+)
-- [x] First-launch auto-register, persisted in `UserDefaults` so we never silently re-enable after the user opts out
-- [x] Menubar "Launch at Login" toggle reflecting current `SMAppService.mainApp.status`
+- [x] `ensureEnabled()` runs on every launch — idempotent re-register, no in-app toggle
 - [x] Tests with a fake registry (real `SMAppService` calls only meaningfully run from a properly-bundled `.app` context)
 
 ---
