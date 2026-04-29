@@ -1,6 +1,6 @@
 package com.nigel4321.screentime.core.data.di
 
-import com.nigel4321.screentime.core.data.auth.InMemoryTokenStore
+import com.nigel4321.screentime.core.data.auth.EncryptedSharedPreferencesTokenStore
 import com.nigel4321.screentime.core.data.auth.TokenStore
 import dagger.Binds
 import dagger.Module
@@ -13,5 +13,5 @@ import javax.inject.Singleton
 abstract class AuthModule {
     @Binds
     @Singleton
-    abstract fun bindTokenStore(impl: InMemoryTokenStore): TokenStore
+    abstract fun bindTokenStore(impl: EncryptedSharedPreferencesTokenStore): TokenStore
 }

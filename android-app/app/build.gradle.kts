@@ -46,14 +46,20 @@ detekt {
 dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // DI — Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
+    // Auth state observation drives the start destination.
+    implementation(project(":core-data"))
+
     // Feature modules + design system
     implementation(project(":core-ui"))
+    implementation(project(":core-domain"))
     implementation(project(":feature-onboarding"))
     implementation(project(":feature-dashboard"))
 }
