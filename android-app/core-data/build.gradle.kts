@@ -19,6 +19,16 @@ android {
             "\"https://macos-screentime-backend.fly.dev/\"",
         )
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 detekt {
@@ -36,6 +46,11 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
 
+    // Persistence — Room
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
     // DI
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -44,4 +59,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.room.testing)
 }
