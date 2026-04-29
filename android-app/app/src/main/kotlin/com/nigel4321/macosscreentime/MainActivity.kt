@@ -5,41 +5,48 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.nigel4321.screentime.core.ui.theme.ScreentimeTheme
+import com.nigel4321.screentime.feature.dashboard.TodayScreen
+import com.nigel4321.screentime.feature.dashboard.WeekScreen
+import com.nigel4321.screentime.feature.onboarding.OnboardingScreen
 import dagger.hilt.android.AndroidEntryPoint
 
-/**
- * Single-activity host for the Compose UI tree. Real screens land in
- * milestone 3 once the feature modules exist.
- */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            ScreentimeTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(modifier = Modifier.padding(innerPadding))
+                    ScreentimeNavHost(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
     }
 }
 
-@Composable
-private fun Greeting(modifier: Modifier = Modifier) {
-    Text(text = "macos-screentime", modifier = modifier)
+private object Routes {
+    const val ONBOARDING = "onboarding"
+    const val TODAY = "today"
+    const val WEEK = "week"
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun GreetingPreview() {
-    MaterialTheme {
-        Greeting()
+private fun ScreentimeNavHost(modifier: Modifier = Modifier) {
+    val navController = rememberNavController()
+    NavHost(
+        navController = navController,
+        startDestination = Routes.ONBOARDING,
+        modifier = modifier,
+    ) {
+        composable(Routes.ONBOARDING) { OnboardingScreen() }
+        composable(Routes.TODAY) { TodayScreen() }
+        composable(Routes.WEEK) { WeekScreen() }
     }
 }
