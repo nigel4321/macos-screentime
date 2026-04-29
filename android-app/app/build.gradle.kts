@@ -54,6 +54,11 @@ android {
     }
 }
 
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom("$rootDir/config/detekt/detekt.yml")
+}
+
 dependencies {
     // Compose
     val composeBom = platform(libs.androidx.compose.bom)
