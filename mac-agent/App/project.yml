@@ -42,6 +42,8 @@ targets:
         product: SyncClient
       - package: MacAgentCore
         product: AppMetadata
+      - package: MacAgentCore
+        product: LoginItem
     info:
       path: Info.plist
       properties:

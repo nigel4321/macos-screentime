@@ -1,6 +1,7 @@
 import Foundation
 import IOKit
 import LocalStore
+import LoginItem
 import SyncClient
 import UsageCollector
 import os
@@ -15,6 +16,7 @@ final class AppContainer {
     private let source: NSWorkspaceSource
     private let collector: UsageCollector
     private let syncClient: SyncClient
+    let loginItem: LoginItemController
     private let logger = Logger(subsystem: "com.macos-screentime.MacAgent", category: "AppContainer")
 
     /// Periodic flush cadence. 60s is the smallest cadence that meaningfully
@@ -41,6 +43,20 @@ final class AppContainer {
             dao: dao,
             fingerprint: Self.deviceFingerprint()
         )
+        loginItem = LoginItemController.makeDefault()
+        // Launch-at-login is mandatory: re-register on every launch.
+        // ensureEnabled() is idempotent. macOS keeps the user's choice
+        // authoritative if they disable it via System Settings, so this
+        // can leave us in `.requiresApproval` — log it but don't fail.
+        do {
+            try loginItem.ensureEnabled()
+        } catch {
+            logger.error("login-item ensureEnabled failed: \(String(describing: error), privacy: .public)")
+        }
+        let currentStatus = loginItem.status()
+        if currentStatus != .enabled {
+            logger.info("login-item status after ensureEnabled: \(String(describing: currentStatus), privacy: .public)")
+        }
         startPeriodicFlush()
     }
 
