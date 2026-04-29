@@ -7,7 +7,7 @@ java                      = "21"
 
 # Android SDKs
 compileSdk                = "36"
-minSdk                    = "26"
+minSdk                    = "31"
 targetSdk                 = "36"
 
 # Compose

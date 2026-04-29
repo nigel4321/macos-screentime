@@ -206,7 +206,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 2.11 Android: project setup
 - [ ] Init `android-app/` Gradle project
-- [ ] Kotlin 2.1, AGP 8.13, Gradle 8.13, JDK 21 toolchain, `minSdk 26`, `compileSdk 36`, `targetSdk 36`
+- [ ] Kotlin 2.1, AGP 8.13, Gradle 8.13, JDK 21 toolchain, `minSdk 31`, `compileSdk 36`, `targetSdk 36` *(minSdk 31 chosen for full Material You 3.0 + `RenderEffect.createBlurEffect` glass surfaces in §2.17)*
 - [ ] Compose BOM, Material 3
 - [ ] Hilt plugin + dependencies
 - [ ] Retrofit, OkHttp, kotlinx.serialization
@@ -223,6 +223,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] `:app` (Compose entry, navigation, DI)
 - [ ] `:core-domain` (pure Kotlin)
 - [ ] `:core-data` (Retrofit + Room + repositories)
+- [ ] `:core-ui` (Material 3 theme + `dynamicColorScheme`, bento tile composables, glass-surface helpers, motion utilities, haptics)
 - [ ] `:feature-onboarding`
 - [ ] `:feature-dashboard`
 - [ ] Wire Hilt across modules
@@ -258,7 +259,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 2.17 Android: dashboard — today
 - [ ] `TodayViewModel` fetching per-app summary
-- [ ] Vico bar chart
+- [ ] Bento grid via `LazyVerticalGrid(GridCells.Fixed(2))` — total-today (2×1), top-N apps (1×1 each), category breakdown (2×1), downtime status (2×1)
+- [ ] Vico bar chart inside the wide tiles
+- [ ] Edge-to-edge layout (`enableEdgeToEdge()`); translucent top bar + bottom nav using `RenderEffect.createBlurEffect` (lives in `:core-ui`)
+- [ ] Shared-element transition: tap an app tile → expand into app-detail screen (`SharedTransitionLayout`, Compose 1.7+)
+- [ ] Long-press an app row → bottom sheet (set limit / hard block / view week); always reachable from a visible affordance for TalkBack
+- [ ] Pull-to-refresh
 - [ ] Loading skeleton
 - [ ] Error + retry state
 - [ ] Empty state
@@ -266,8 +272,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 2.18 Android: dashboard — week
 - [ ] `WeekViewModel` fetching per-day summary
-- [ ] Vico stacked bars
+- [ ] Vico stacked bars, full-bleed (chart extends to safe-area edges; gridlines respect insets)
 - [ ] Tab navigation between Today and Week
+- [ ] Shared-element transition: tap a day column → expand into day-detail
 - [ ] Compose UI tests
 
 ### 2.19 Android CI — extension
@@ -284,6 +291,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] `.github/workflows/android-release.yml` on `android-v*` tags
 - [ ] First successful internal-track upload
 - [ ] Verify install on a tester device
+
+### 2.21 Android: UI polish + accessibility
+*Should land before §2.20 first internal release if practical; numbering kept stable.*
+- [ ] Haptic feedback on long-press, limit-cross, policy-saved (`HapticFeedback`)
+- [ ] Accessibility audit: every gesture has a visible button alternative; TalkBack labels on all bento tiles and chart axes
+- [ ] Motion review: shared transitions feel right at 120Hz; no animation duration > 400ms outside transitions; verify no jank on a low-end device (4 GB RAM, mid-tier SoC)
+- [ ] Whitespace pass: re-pad after first usable build; tile inner padding ≥ 16dp, grid gutters ≥ 12dp
 
 ---
 
