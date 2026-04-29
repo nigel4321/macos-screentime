@@ -51,6 +51,9 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
+    // Encrypted token storage
+    implementation(libs.androidx.security.crypto)
+
     // DI
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

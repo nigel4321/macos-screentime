@@ -37,6 +37,11 @@ lifecycle                 = "2.9.0"
 # Navigation
 navigation                = "2.8.4"
 
+# Auth + security
+credentials               = "1.3.0"
+googleid                  = "1.1.1"
+securityCrypto            = "1.1.0-alpha06"
+
 # Static analysis
 ktlint                    = "12.1.2"
 detekt                    = "1.23.7"
@@ -46,6 +51,7 @@ junit                     = "4.13.2"
 coroutinesTest            = "1.10.1"
 robolectric               = "4.13"
 androidxTestCore          = "1.6.1"
+mockito                   = "5.14.2"
 
 [libraries]
 # Compose
@@ -58,6 +64,7 @@ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling
 
 # Lifecycle / coroutines
 androidx-lifecycle-runtime-ktx    = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 kotlinx-coroutines-android        = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 
@@ -77,6 +84,7 @@ junit                             = { module = "junit:junit", version.ref = "jun
 robolectric                       = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core                = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 room-testing                      = { module = "androidx.room:room-testing", version.ref = "room" }
+mockito-core                      = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 
 # Room
 room-runtime                      = { module = "androidx.room:room-runtime", version.ref = "room" }
@@ -94,6 +102,12 @@ ksp-gradlePlugin                  = { module = "com.google.devtools.ksp:com.goog
 
 # Navigation (used by :app NavHost)
 androidx-navigation-compose       = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
+
+# Auth + security
+androidx-credentials              = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+googleid                          = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+androidx-security-crypto          = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 
 [plugins]
 android-application               = { id = "com.android.application", version.ref = "agp" }
