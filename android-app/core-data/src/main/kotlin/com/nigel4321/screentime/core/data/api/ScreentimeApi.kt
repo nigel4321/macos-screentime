@@ -1,5 +1,6 @@
 package com.nigel4321.screentime.core.data.api
 
+import com.nigel4321.screentime.core.data.api.dto.DeviceListResponse
 import com.nigel4321.screentime.core.data.api.dto.GoogleAuthRequest
 import com.nigel4321.screentime.core.data.api.dto.PairCompleteRequest
 import com.nigel4321.screentime.core.data.api.dto.PolicyResponse
@@ -30,4 +31,7 @@ interface ScreentimeApi {
 
     @GET("v1/policy/current")
     suspend fun currentPolicy(): PolicyResponse
+
+    @GET("v1/devices")
+    suspend fun listDevices(): DeviceListResponse
 }

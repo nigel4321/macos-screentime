@@ -68,6 +68,8 @@ func NewRouter(d Deps) http.Handler {
 					PairCompleteHandler(d.Store, d.JWTSigner))
 				r.Method(http.MethodPost, "/v1/devices/register",
 					DevicesRegisterHandler(d.Store, minter))
+				r.Method(http.MethodGet, "/v1/devices",
+					DevicesListHandler(d.Store))
 
 				// Stub policy endpoint — empty v0 until persistence
 				// lands in M3. No deps; auth is enforced by the
