@@ -6,7 +6,10 @@ struct MacAgentApp: App {
 
     var body: some Scene {
         MenuBarExtra("Screen Time", systemImage: "timer") {
-            TodayView(viewModel: container.todayViewModel)
+            TodayView(
+                viewModel: container.todayViewModel,
+                loginItem: container.loginItem
+            )
         }
         .menuBarExtraStyle(.window)
         .commands {

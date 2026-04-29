@@ -1,6 +1,7 @@
 import Foundation
 import IOKit
 import LocalStore
+import LoginItem
 import SyncClient
 import UsageCollector
 import os
@@ -15,6 +16,7 @@ final class AppContainer {
     private let source: NSWorkspaceSource
     private let collector: UsageCollector
     private let syncClient: SyncClient
+    let loginItem: LoginItemController
     private let logger = Logger(subsystem: "com.macos-screentime.MacAgent", category: "AppContainer")
 
     /// Periodic flush cadence. 60s is the smallest cadence that meaningfully
@@ -41,6 +43,14 @@ final class AppContainer {
             dao: dao,
             fingerprint: Self.deviceFingerprint()
         )
+        loginItem = LoginItemController.makeDefault()
+        // Auto-register exactly once, ever. Failures here are non-fatal —
+        // the menubar toggle is the recovery path.
+        do {
+            try loginItem.enableOnFirstLaunchIfNeeded()
+        } catch {
+            logger.error("login-item auto-register failed: \(String(describing: error), privacy: .public)")
+        }
         startPeriodicFlush()
     }
 

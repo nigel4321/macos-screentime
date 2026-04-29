@@ -1,7 +1,10 @@
+import LoginItem
 import SwiftUI
 
 struct TodayView: View {
     var viewModel: TodayViewModel
+    var loginItem: LoginItemController?
+    @State private var launchAtLogin: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -13,9 +16,12 @@ struct TodayView: View {
                 appList
             }
             Divider()
+            launchAtLoginToggle
+            Divider()
             quitButton
         }
         .frame(width: 280)
+        .onAppear { syncLaunchAtLoginState() }
     }
 
     private var header: some View {
@@ -49,6 +55,34 @@ struct TodayView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var launchAtLoginToggle: some View {
+        if let loginItem {
+            Toggle("Launch at Login", isOn: Binding(
+                get: { launchAtLogin },
+                set: { newValue in
+                    do {
+                        try loginItem.setEnabled(newValue)
+                        launchAtLogin = newValue
+                    } catch {
+                        // Re-sync from the registry on failure so the
+                        // toggle reflects the OS's actual state, not the
+                        // stale UI state.
+                        syncLaunchAtLoginState()
+                    }
+                }
+            ))
+            .toggleStyle(.switch)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+    }
+
+    private func syncLaunchAtLoginState() {
+        guard let loginItem else { return }
+        launchAtLogin = (loginItem.status() == .enabled)
     }
 
     private var quitButton: some View {

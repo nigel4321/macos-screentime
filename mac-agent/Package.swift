@@ -22,7 +22,8 @@ let package = Package(
         .library(name: "LocalStore", targets: ["LocalStore"]),
         .library(name: "UsageCollector", targets: ["UsageCollector"]),
         .library(name: "SyncClient", targets: ["SyncClient"]),
-        .library(name: "AppMetadata", targets: ["AppMetadata"])
+        .library(name: "AppMetadata", targets: ["AppMetadata"]),
+        .library(name: "LoginItem", targets: ["LoginItem"])
     ],
     dependencies: [
         // SwiftLint is attached per-target as a build-tool plugin so every
@@ -101,6 +102,19 @@ let package = Package(
         .testTarget(
             name: "AppMetadataTests",
             dependencies: ["AppMetadata", "PolicyEngine"],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
+            ]
+        ),
+        .target(
+            name: "LoginItem",
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
+            ]
+        ),
+        .testTarget(
+            name: "LoginItemTests",
+            dependencies: ["LoginItem"],
             plugins: [
                 .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]
