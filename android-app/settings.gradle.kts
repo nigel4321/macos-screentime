@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -30,3 +31,8 @@ dependencyResolutionManagement {
 rootProject.name = "macos-screentime-android"
 
 include(":app")
+include(":core-domain")
+include(":core-data")
+include(":core-ui")
+include(":feature-onboarding")
+include(":feature-dashboard")

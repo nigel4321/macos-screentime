@@ -34,6 +34,9 @@ vico                      = "2.0.2"
 coroutines                = "1.10.1"
 lifecycle                 = "2.9.0"
 
+# Navigation
+navigation                = "2.8.4"
+
 # Static analysis
 ktlint                    = "12.1.2"
 detekt                    = "1.23.7"
@@ -71,10 +74,20 @@ room-compiler                     = { module = "androidx.room:room-compiler", ve
 # Charts
 vico-compose-m3                   = { module = "com.patrykandpatrick.vico:compose-m3", version.ref = "vico" }
 
+# Plugin classpath — used by build-logic convention plugins (compileOnly)
+android-gradlePlugin              = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+kotlin-gradlePlugin               = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+compose-gradlePlugin              = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+ksp-gradlePlugin                  = { module = "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+
+# Navigation (used by :app NavHost)
+androidx-navigation-compose       = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
+
 [plugins]
 android-application               = { id = "com.android.application", version.ref = "agp" }
 android-library                   = { id = "com.android.library", version.ref = "agp" }
 kotlin-android                    = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm                        = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose                    = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization              = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp                               = { id = "com.google.devtools.ksp", version.ref = "ksp" }
