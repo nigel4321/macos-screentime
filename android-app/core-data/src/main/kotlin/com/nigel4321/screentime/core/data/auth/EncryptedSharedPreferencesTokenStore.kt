@@ -17,6 +17,12 @@ import javax.inject.Singleton
  *
  * Survives process death. The in-memory [StateFlow] is seeded from disk
  * at construction so the first observation reflects the persisted token.
+ *
+ * Note: not unit-testable under Robolectric — the AndroidKeyStore JCA
+ * provider used by Tink is native and isn't shimmed in the JVM test
+ * runtime. Verified instead by the [InMemoryTokenStore] contract for
+ * the in-memory state-machine half, plus an instrumented test added
+ * with §2.19's emulator support for the on-disk crypto half.
  */
 @Singleton
 class EncryptedSharedPreferencesTokenStore
