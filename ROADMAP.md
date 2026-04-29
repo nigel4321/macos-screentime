@@ -205,19 +205,19 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] Wire into app lifecycle (periodic flush + on-quit flush)
 
 ### 2.11 Android: project setup
-- [ ] Init `android-app/` Gradle project
-- [ ] Kotlin 2.1, AGP 8.13, Gradle 8.13, JDK 21 toolchain, `minSdk 31`, `compileSdk 36`, `targetSdk 36` *(minSdk 31 chosen for full Material You 3.0 + `RenderEffect.createBlurEffect` glass surfaces in §2.17)*
-- [ ] Compose BOM, Material 3
-- [ ] Hilt plugin + dependencies
-- [ ] Retrofit, OkHttp, kotlinx.serialization
-- [ ] Room
-- [ ] Vico charts
-- [ ] ktlint plugin
-- [ ] detekt plugin
-- [ ] Version catalog in `libs.versions.toml`
-- [ ] `.github/workflows/android.yml` with path filter `android-app/**` *(foundational CI pulled forward from §2.19 so PRs from §2.12+ are gated)*
-- [ ] CI runs `ktlintCheck`, `detekt`, `assembleDebug`
-- [ ] Gradle cache via `gradle/actions/setup-gradle`
+- [x] Init `android-app/` Gradle project
+- [x] Kotlin 2.1, AGP 8.13, Gradle 8.13, JDK 21 toolchain, `minSdk 31`, `compileSdk 36`, `targetSdk 36` *(minSdk 31 chosen for full Material You 3.0 + `RenderEffect.createBlurEffect` glass surfaces in §2.17)*
+- [x] Compose BOM, Material 3
+- [x] Hilt plugin + dependencies
+- [x] Retrofit, OkHttp, kotlinx.serialization
+- [x] Room
+- [x] Vico charts
+- [x] ktlint plugin
+- [x] detekt plugin
+- [x] Version catalog in `libs.versions.toml`
+- [x] `.github/workflows/android.yml` with path filter `android-app/**` *(foundational CI pulled forward from §2.19 so PRs from §2.12+ are gated)*
+- [x] CI runs `ktlintCheck`, `detekt`, `assembleDebug`
+- [x] Gradle cache via `gradle/actions/setup-gradle`
 
 ### 2.12 Android: module split
 - [ ] `:app` (Compose entry, navigation, DI)
