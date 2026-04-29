@@ -78,6 +78,28 @@ jobs:
             -scheme MacAgent \
             -configuration Debug \
             -destination 'platform=macOS' \
+            -derivedDataPath build \
             -skipPackagePluginValidation \
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
+
+      # Zip the .app bundle so directory structure (symlinks inside Frameworks/,
+      # bundle layout) survives round-tripping through upload-artifact.
+      # Output is at mac-agent/App/build/Build/Products/Debug/MacAgent.app per
+      # -derivedDataPath above.
+      - name: Package MacAgent.app
+        working-directory: mac-agent/App/build/Build/Products/Debug
+        run: |
+          ditto -c -k --keepParent MacAgent.app MacAgent.app.zip
+          ls -lh MacAgent.app.zip
+
+      # Debug build, ad-hoc signed (CODE_SIGNING_ALLOWED=NO above) — fine for
+      # the developer to download and run locally; not a distribution build.
+      # Proper codesign + notarize + .dmg is roadmap §3.9.
+      - name: Upload MacAgent.app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MacAgent-debug-${{ github.sha }}
+          path: mac-agent/App/build/Build/Products/Debug/MacAgent.app.zip
+          if-no-files-found: error
+          retention-days: 14
