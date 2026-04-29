@@ -54,6 +54,33 @@ final class LocalStoreTests: XCTestCase {
         XCTAssertTrue(try dao.fetchUnsynced().isEmpty)
     }
 
+    func testInsertAssignsClientEventID() throws {
+        let dao = UsageEventDAO(database: database)
+        try dao.insert(UsageEvent(
+            bundleID: "com.example.A",
+            start: Date(timeIntervalSince1970: 1_000_000),
+            end: Date(timeIntervalSince1970: 1_001_000)
+        ))
+
+        let rows = try dao.fetchUnsynced()
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertFalse(rows[0].clientEventID.isEmpty,
+                       "client_event_id must be populated for backend idempotency")
+    }
+
+    func testInsertAssignsDistinctClientEventIDsAcrossRows() throws {
+        let dao = UsageEventDAO(database: database)
+        for i in 0..<5 {
+            try dao.insert(UsageEvent(
+                bundleID: BundleID("com.example.\(i)"),
+                start: Date(timeIntervalSince1970: TimeInterval(1_000_000 + i * 100)),
+                end: Date(timeIntervalSince1970: TimeInterval(1_000_050 + i * 100))
+            ))
+        }
+        let ids = try dao.fetchUnsynced().map(\.clientEventID)
+        XCTAssertEqual(Set(ids).count, ids.count, "client_event_ids must be unique")
+    }
+
     func testFetchUnsyncedExcludesSyncedEvents() throws {
         let dao = UsageEventDAO(database: database)
         try dao.insert(UsageEvent(

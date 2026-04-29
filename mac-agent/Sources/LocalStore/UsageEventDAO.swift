@@ -2,6 +2,21 @@ import Foundation
 import GRDB
 import PolicyEngine
 
+/// One unsynced usage row plus the metadata SyncClient needs to upload it:
+/// the local row id (for `markSynced`) and the stable client-generated event
+/// id that backend's idempotency contract is keyed on.
+public struct UnsyncedUsageEvent: Equatable {
+    public let id: Int64
+    public let clientEventID: String
+    public let event: UsageEvent
+
+    public init(id: Int64, clientEventID: String, event: UsageEvent) {
+        self.id = id
+        self.clientEventID = clientEventID
+        self.event = event
+    }
+}
+
 public struct UsageEventDAO {
     private let dbQueue: DatabaseQueue
 
@@ -9,21 +24,28 @@ public struct UsageEventDAO {
         dbQueue = database.dbQueue
     }
 
-    /// Appends a usage event. The row id is assigned by SQLite.
+    /// Appends a usage event. The row id is assigned by SQLite; the
+    /// client-event id is generated locally and is what backend uses for
+    /// idempotent dedup on `(device_id, client_event_id, started_at)`.
     public func insert(_ event: UsageEvent) throws {
         var row = UsageEventRow(event: event)
         try dbQueue.write { db in try row.insert(db) }
     }
 
-    /// Returns all events that have not yet been pushed to the backend.
-    public func fetchUnsynced() throws -> [(id: Int64, event: UsageEvent)] {
+    /// Returns all events that have not yet been pushed to the backend,
+    /// each tagged with its row id and stable `client_event_id`.
+    public func fetchUnsynced() throws -> [UnsyncedUsageEvent] {
         try dbQueue.read { db in
             try UsageEventRow
                 .filter(Column("synced_at") == nil)
                 .fetchAll(db)
                 .compactMap { row in
                     guard let id = row.id else { return nil }
-                    return (id: id, event: row.toUsageEvent())
+                    return UnsyncedUsageEvent(
+                        id: id,
+                        clientEventID: row.clientEventId,
+                        event: row.toUsageEvent()
+                    )
                 }
         }
     }

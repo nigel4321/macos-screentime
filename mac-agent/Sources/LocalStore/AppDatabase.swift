@@ -42,6 +42,27 @@ public struct AppDatabase {
                 )
             """)
         }
+        // v2: backend's batchUpload contract is idempotent on
+        // (device_id, client_event_id, started_at). Each local event
+        // gets a stable client-generated id at insert time so retries
+        // collapse server-side into a single accepted row.
+        migrator.registerMigration("v2_client_event_id") { db in
+            // SQLite cannot ADD COLUMN with both NOT NULL and a non-constant
+            // default, so we add the column nullable, backfill in-place,
+            // then enforce uniqueness and rely on the DAO to never write NULL.
+            try db.execute(sql: """
+                ALTER TABLE usage_event ADD COLUMN client_event_id TEXT
+            """)
+            try db.execute(sql: """
+                UPDATE usage_event
+                   SET client_event_id = lower(hex(randomblob(16)))
+                 WHERE client_event_id IS NULL
+            """)
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX idx_usage_client_event_id
+                    ON usage_event(client_event_id)
+            """)
+        }
         try migrator.migrate(dbQueue)
     }
 }
