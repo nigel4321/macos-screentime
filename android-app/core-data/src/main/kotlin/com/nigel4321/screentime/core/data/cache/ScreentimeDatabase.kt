@@ -4,7 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [UsageSummaryRowEntity::class],
+    entities = [UsageSummaryRowEntity::class, CacheMetadataEntity::class],
     version = 1,
     exportSchema = true,
 )

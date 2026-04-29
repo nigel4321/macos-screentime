@@ -239,8 +239,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 2.14 Android: local cache
 - [ ] `ScreentimeDatabase` (Room) in `:core-data` with KSP-generated impl, schema export to `core-data/schemas/`
-- [ ] `UsageSummaryRowEntity` (single table keyed by `cache_key` + indexed; auto-id, `cached_at` epoch millis)
-- [ ] `UsageSummaryDao` — `observeByCacheKey` (Flow), `cachedAt`, `replace` (transactional wipe-and-insert), `deleteOlderThan`, `insertAll`
+- [ ] `UsageSummaryRowEntity` (single table keyed by `cache_key` + indexed; auto-id, `cached_at` epoch millis) and `CacheMetadataEntity` (per-cache-key `last_refresh_at`) — metadata is separate so an empty refresh still records freshness
+- [ ] `UsageSummaryDao` — `observeByCacheKey` (Flow), `lastRefreshAt`, `replace` (transactional wipe-rows-+-upsert-metadata), `deleteOlderThan`, `insertAll`, `upsertMetadata`
 - [ ] `UsageRepository` cache-first / network-refresh: `summary()` returns `Flow<UsageSummary>` from cache; `refresh()` fetches and replaces; `isStale()` reports against injected `Clock` and `DEFAULT_TTL = 5.minutes`
 - [ ] Cache invalidation rules: per-key wipe-and-replace on refresh, TTL on read, global `purgeOlderThan` for app-launch sweep
 - [ ] `DatabaseModule` (Hilt) provides `ScreentimeDatabase`, `UsageSummaryDao`, and a `Clock` singleton

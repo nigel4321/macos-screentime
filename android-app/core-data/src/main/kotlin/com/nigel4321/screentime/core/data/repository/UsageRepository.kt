@@ -69,9 +69,9 @@ class UsageRepository
                     groupBy = groupBy.queryParam,
                 )
             val cacheKey = CacheKey.summary(from, to, groupBy)
-            val cachedAt = clock.millis()
-            val rows = response.results.map { it.toEntity(cacheKey, cachedAt) }
-            dao.replace(cacheKey, rows)
+            val refreshedAt = clock.millis()
+            val rows = response.results.map { it.toEntity(cacheKey, refreshedAt) }
+            dao.replace(cacheKey, rows, refreshedAt)
         }
 
         suspend fun isStale(
@@ -80,8 +80,8 @@ class UsageRepository
             groupBy: GroupBy = GroupBy.None,
             ttl: Duration = DEFAULT_TTL,
         ): Boolean {
-            val cachedAt = dao.cachedAt(CacheKey.summary(from, to, groupBy)) ?: return true
-            val age = (clock.millis() - cachedAt).coerceAtLeast(0L)
+            val refreshedAt = dao.lastRefreshAt(CacheKey.summary(from, to, groupBy)) ?: return true
+            val age = (clock.millis() - refreshedAt).coerceAtLeast(0L)
             return age >= ttl.inWholeMilliseconds
         }
 

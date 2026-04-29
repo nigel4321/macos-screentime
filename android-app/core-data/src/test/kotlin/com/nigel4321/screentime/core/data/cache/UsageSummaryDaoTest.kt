@@ -51,34 +51,44 @@ class UsageSummaryDaoTest {
         }
 
     @Test
-    fun `cachedAt returns the minimum cached_at for a key`() =
+    fun `lastRefreshAt returns the value written by upsertMetadata`() =
         runTest {
-            dao.insertAll(
-                listOf(
-                    row("k1", "com.a", null, 60, 2_000L),
-                    row("k1", "com.b", null, 60, 1_500L),
-                ),
-            )
+            dao.upsertMetadata(CacheMetadataEntity(cacheKey = "k1", lastRefreshAt = 1_500L))
+            dao.upsertMetadata(CacheMetadataEntity(cacheKey = "k1", lastRefreshAt = 2_000L))
 
-            assertEquals(1_500L, dao.cachedAt("k1"))
+            assertEquals(2_000L, dao.lastRefreshAt("k1"))
         }
 
     @Test
-    fun `cachedAt returns null for an unknown key`() =
+    fun `lastRefreshAt returns null for an unknown key`() =
         runTest {
-            assertNull(dao.cachedAt("missing"))
+            assertNull(dao.lastRefreshAt("missing"))
         }
 
     @Test
-    fun `replace deletes prior rows for the key in the same transaction`() =
+    fun `replace deletes prior rows and writes the metadata in one transaction`() =
         runTest {
             dao.insertAll(listOf(row("k1", "old", null, 60, 1_000L)))
 
-            dao.replace("k1", listOf(row("k1", "new", null, 60, 2_000L)))
+            dao.replace(
+                cacheKey = "k1",
+                rows = listOf(row("k1", "new", null, 60, 2_000L)),
+                refreshedAt = 2_000L,
+            )
 
             val rows = dao.observeByCacheKey("k1").first()
             assertEquals(1, rows.size)
             assertEquals("new", rows[0].bundleId)
+            assertEquals(2_000L, dao.lastRefreshAt("k1"))
+        }
+
+    @Test
+    fun `replace with empty rows still records freshness via metadata`() =
+        runTest {
+            dao.replace(cacheKey = "k1", rows = emptyList(), refreshedAt = 5_000L)
+
+            assertEquals(0, dao.observeByCacheKey("k1").first().size)
+            assertEquals(5_000L, dao.lastRefreshAt("k1"))
         }
 
     @Test
