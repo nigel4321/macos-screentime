@@ -40,6 +40,8 @@ targets:
         product: UsageCollector
       - package: MacAgentCore
         product: SyncClient
+      - package: MacAgentCore
+        product: AppMetadata
     info:
       path: Info.plist
       properties:

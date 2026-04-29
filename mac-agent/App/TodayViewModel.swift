@@ -1,14 +1,14 @@
 import Foundation
 import Observation
+import AppMetadata
 import LocalStore
 import PolicyEngine
 
 struct AppUsageSummary: Identifiable {
     let id: BundleID
     let bundleID: BundleID
+    let displayName: String
     let duration: TimeInterval
-
-    var displayName: String { bundleID.value }
 
     var formattedDuration: String {
         let hours   = Int(duration) / 3_600
@@ -24,10 +24,16 @@ final class TodayViewModel {
 
     private let dao: UsageEventDAO
     private let calendar: Calendar
+    private let resolver: AppMetadataResolver
 
-    init(dao: UsageEventDAO, calendar: Calendar = .current) {
+    init(
+        dao: UsageEventDAO,
+        calendar: Calendar = .current,
+        resolver: AppMetadataResolver = SystemAppMetadataResolver()
+    ) {
         self.dao = dao
         self.calendar = calendar
+        self.resolver = resolver
         refresh()
     }
 
@@ -41,7 +47,14 @@ final class TodayViewModel {
         }
 
         topApps = totals
-            .map { AppUsageSummary(id: $0.key, bundleID: $0.key, duration: $0.value) }
+            .map { bundleID, duration in
+                AppUsageSummary(
+                    id: bundleID,
+                    bundleID: bundleID,
+                    displayName: resolver.displayName(for: bundleID),
+                    duration: duration
+                )
+            }
             .sorted { $0.duration > $1.duration }
             .prefix(5)
             .map { $0 }

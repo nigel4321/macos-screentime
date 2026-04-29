@@ -108,6 +108,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Empty state
 - [x] First-launch onboarding screen (observe-only copy)
 
+### 1.12 Mac UI polish *(mac-only)*
+*Late addition: M1 shipped with the Today view rendering raw bundle IDs ("com.google.Chrome"), which is unfriendly. Section reserved for Mac-side UI polish equivalent to Android's §2.21.*
+- [x] App display-name resolution (`com.google.Chrome` → "Google Chrome") via `NSWorkspace` + `CFBundleDisplayName` / `CFBundleName`, with caching and a graceful bundle-id fallback for uninstalled apps *(`AppMetadata` SPM target with `SystemAppMetadataResolver`; injectable lookup keeps tests independent of CI runner state; positive + negative cache)*
+
 ### 1.11 CI
 - [x] `.github/workflows/mac.yml` on `macos-14`
 - [x] Run SwiftLint *(via SPM build-tool plugin during `swift build`)*
