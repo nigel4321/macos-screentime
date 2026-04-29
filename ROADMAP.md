@@ -238,13 +238,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] MockWebServer unit tests covering API round-trip, interceptor header, 401 → token-clear, repository mapping
 
 ### 2.14 Android: local cache
-- [ ] `ScreentimeDatabase` (Room) in `:core-data` with KSP-generated impl, schema export to `core-data/schemas/`
-- [ ] `UsageSummaryRowEntity` (single table keyed by `cache_key` + indexed; auto-id, `cached_at` epoch millis) and `CacheMetadataEntity` (per-cache-key `last_refresh_at`) — metadata is separate so an empty refresh still records freshness
-- [ ] `UsageSummaryDao` — `observeByCacheKey` (Flow), `lastRefreshAt`, `replace` (transactional wipe-rows-+-upsert-metadata), `deleteOlderThan`, `insertAll`, `upsertMetadata`
-- [ ] `UsageRepository` cache-first / network-refresh: `summary()` returns `Flow<UsageSummary>` from cache; `refresh()` fetches and replaces; `isStale()` reports against injected `Clock` and `DEFAULT_TTL = 5.minutes`
-- [ ] Cache invalidation rules: per-key wipe-and-replace on refresh, TTL on read, global `purgeOlderThan` for app-launch sweep
-- [ ] `DatabaseModule` (Hilt) provides `ScreentimeDatabase`, `UsageSummaryDao`, and a `Clock` singleton
-- [ ] Tests: Robolectric `UsageSummaryDaoTest` exercising real Room schema; `UsageRepositoryTest` with `FakeUsageSummaryDao` + MockWebServer covering cache-miss, refresh-replace, TTL boundaries, purge
+- [x] `ScreentimeDatabase` (Room) in `:core-data` with KSP-generated impl, schema export to `core-data/schemas/`
+- [x] `UsageSummaryRowEntity` (single table keyed by `cache_key` + indexed; auto-id, `cached_at` epoch millis) and `CacheMetadataEntity` (per-cache-key `last_refresh_at`) — metadata is separate so an empty refresh still records freshness
+- [x] `UsageSummaryDao` — `observeByCacheKey` (Flow), `lastRefreshAt`, `replace` (transactional wipe-rows-+-upsert-metadata), `deleteOlderThan`, `insertAll`, `upsertMetadata`
+- [x] `UsageRepository` cache-first / network-refresh: `summary()` returns `Flow<UsageSummary>` from cache; `refresh()` fetches and replaces; `isStale()` reports against injected `Clock` and `DEFAULT_TTL = 5.minutes`
+- [x] Cache invalidation rules: per-key wipe-and-replace on refresh, TTL on read, global `purgeOlderThan` for app-launch sweep
+- [x] `DatabaseModule` (Hilt) provides `ScreentimeDatabase`, `UsageSummaryDao`, and a `Clock` singleton
+- [x] Tests: Robolectric `UsageSummaryDaoTest` exercising real Room schema; `UsageRepositoryTest` with `FakeUsageSummaryDao` + MockWebServer covering cache-miss, refresh-replace, TTL boundaries, purge
 
 ### 2.15 Android: onboarding
 - [ ] Google Sign-In via Credential Manager
