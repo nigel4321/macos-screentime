@@ -230,12 +230,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Wire Hilt across modules (`@HiltAndroidApp` in `:app`, `@AndroidEntryPoint` per Activity, per-module `@Module` shells)
 
 ### 2.13 Android: network layer
-- [ ] Retrofit `ScreentimeApi` interface for v1 endpoints (`/v1/auth/google`, `/v1/account:pair-complete`, `/v1/usage:summary`, `/v1/policy/current`)
-- [ ] `AuthInterceptor` adding `Authorization: Bearer <jwt>` (skipped when token is absent)
-- [ ] `AuthAuthenticator` for 401 — clears token, flips `TokenStore.authState` to `Anonymous` so the UI re-routes to sign-in *(backend has no refresh-token endpoint by design — re-auth goes through Google Sign-In again)*
-- [ ] `kotlinx.serialization` `@Serializable` DTOs in `:core-data` + DTO→domain mappers; domain types live in `:core-domain`
-- [ ] `AuthRepository`, `UsageRepository`, `PolicyRepository` in `:core-data`
-- [ ] MockWebServer unit tests covering API round-trip, interceptor header, 401 → token-clear, repository mapping
+- [x] Retrofit `ScreentimeApi` interface for v1 endpoints (`/v1/auth/google`, `/v1/account:pair-complete`, `/v1/usage:summary`, `/v1/policy/current`)
+- [x] `AuthInterceptor` adding `Authorization: Bearer <jwt>` (skipped when token is absent)
+- [x] `AuthAuthenticator` for 401 — clears token, flips `TokenStore.authState` to `Anonymous` so the UI re-routes to sign-in *(backend has no refresh-token endpoint by design — re-auth goes through Google Sign-In again)*
+- [x] `kotlinx.serialization` `@Serializable` DTOs in `:core-data` + DTO→domain mappers; domain types live in `:core-domain`
+- [x] `AuthRepository`, `UsageRepository`, `PolicyRepository` in `:core-data`
+- [x] MockWebServer unit tests covering API round-trip, interceptor header, 401 → token-clear, repository mapping
 
 ### 2.14 Android: local cache
 - [ ] Room DB in `:core-data`
