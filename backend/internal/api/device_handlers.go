@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/nigel4321/macos-screentime/backend/internal/auth"
 )
@@ -14,6 +15,12 @@ import (
 // auth.Store satisfies it; tests can substitute a fake.
 type DeviceStore interface {
 	RegisterDevice(ctx context.Context, accountID, platform, fingerprint string, tokenHash []byte) (string, error)
+}
+
+// DeviceLister is the persistence surface DevicesListHandler needs.
+// auth.Store satisfies it; tests can substitute a fake.
+type DeviceLister interface {
+	ListDevicesForAccount(ctx context.Context, accountID string) ([]auth.DeviceSummary, error)
 }
 
 // DeviceTokenMinter mints fresh device tokens. The default
@@ -102,5 +109,50 @@ func DevicesRegisterHandler(store DeviceStore, minter DeviceTokenMinter) http.Ha
 			DeviceID:    deviceID,
 			DeviceToken: token,
 		})
+	})
+}
+
+type deviceListItem struct {
+	ID          string     `json:"id"`
+	Platform    string     `json:"platform"`
+	Fingerprint string     `json:"fingerprint"`
+	CreatedAt   time.Time  `json:"created_at"`
+	LastSeenAt  *time.Time `json:"last_seen_at,omitempty"`
+}
+
+type deviceListResponse struct {
+	Devices []deviceListItem `json:"devices"`
+}
+
+// DevicesListHandler returns the calling account's registered devices.
+// Account scope is enforced by the SQL WHERE clause inside
+// ListDevicesForAccount, so a stolen JWT cannot enumerate devices
+// belonging to a different account.
+func DevicesListHandler(lister DeviceLister) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accountID := auth.AccountIDFromContext(r.Context())
+		if accountID == "" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		devices, err := lister.ListDevicesForAccount(r.Context(), accountID)
+		if err != nil {
+			slog.ErrorContext(r.Context(), "list devices", "err", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		out := make([]deviceListItem, 0, len(devices))
+		for _, d := range devices {
+			out = append(out, deviceListItem{
+				ID:          d.ID,
+				Platform:    d.Platform,
+				Fingerprint: d.Fingerprint,
+				CreatedAt:   d.CreatedAt,
+				LastSeenAt:  d.LastSeenAt,
+			})
+		}
+		writeJSON(w, http.StatusOK, deviceListResponse{Devices: out})
 	})
 }

@@ -206,6 +206,47 @@ func (s *Store) ResolveDevice(ctx context.Context, accountID, deviceToken string
 	return id, nil
 }
 
+// DeviceSummary is the read-only projection returned by
+// ListDevicesForAccount. Token hashes are deliberately omitted —
+// callers (Android) only need the metadata to pick a primary device.
+type DeviceSummary struct {
+	ID          string
+	Platform    string
+	Fingerprint string
+	CreatedAt   time.Time
+	LastSeenAt  *time.Time
+}
+
+// ListDevicesForAccount returns all devices owned by accountID,
+// ordered by created_at ASC for stable display. Cross-account
+// isolation is enforced by the WHERE clause; the handler must still
+// only invoke this with the authenticated account's id.
+func (s *Store) ListDevicesForAccount(ctx context.Context, accountID string) ([]DeviceSummary, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT id::text, platform, fingerprint, created_at, last_seen_at
+		  FROM device
+		 WHERE account_id = $1::uuid
+		 ORDER BY created_at ASC
+	`, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("auth: list devices: %w", err)
+	}
+	defer rows.Close()
+
+	devices := make([]DeviceSummary, 0)
+	for rows.Next() {
+		var d DeviceSummary
+		if err := rows.Scan(&d.ID, &d.Platform, &d.Fingerprint, &d.CreatedAt, &d.LastSeenAt); err != nil {
+			return nil, fmt.Errorf("auth: list devices: scan: %w", err)
+		}
+		devices = append(devices, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("auth: list devices: %w", err)
+	}
+	return devices, nil
+}
+
 // AccountExists reports whether an account row with the given id is
 // still present. The Authenticator middleware uses this to reject JWTs
 // whose account has been deleted (e.g. by a merge).

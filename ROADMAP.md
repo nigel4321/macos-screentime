@@ -258,10 +258,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Tests: `OnboardingViewModelTest` (Mockito + `FakeGoogleSignInClient` + MockWebServer) covering Idle→Loading→Authenticated, Google failure → Error, backend 401 → Error, dismissError, initial-Authenticated. *(Encrypted store round-trip deferred to instrumented tests in §2.19 — Robolectric doesn't shim AndroidKeyStore.)*
 
 ### 2.16 Android: device pairing
-- [ ] Fetch registered devices for account
-- [ ] UI to pick primary device
-- [ ] Persist selected device id
-- [ ] Zero-device state with copy: "install the Mac agent first"
+- [ ] Backend `GET /v1/devices` (added under §2.4 territory): `Store.ListDevicesForAccount` + `DevicesListHandler` mounted in the Authenticator group; `last_seen_at` is `omitempty`; integration test asserts cross-account isolation
+- [ ] `:core-domain` `Device` / `DeviceId` / `DevicePlatform`; `:core-data` `DeviceDto` + `DeviceListResponse` + mapper + `ScreentimeApi.listDevices()`
+- [ ] `DeviceRepository.list()` in `:core-data`; `SelectedDeviceStore` interface + `SharedPreferencesSelectedDeviceStore` (unencrypted — device id is server-issued and account-scoped, not sensitive)
+- [ ] `DeviceSession` (combines `TokenStore.authState` + `SelectedDeviceStore.selected` into `Anonymous / NeedsDevice / Ready`); replaces the §2.15 two-state `AuthGateViewModel` so the gate routes through pairing
+- [ ] `DevicePairingViewModel` (`Loading / Devices / ZeroDevices / Error`) + `DevicePairingScreen`: Material 3 radio list, "Continue" CTA, zero-device empty state with copy "Install the Mac agent first, then come back here.", error+retry
+- [ ] `MainActivity` NavHost gains `pairing` route between `onboarding` and `today`; auth gate re-navigates on every `SessionState` transition
+- [ ] Tests: backend unit (success / empty array not null / 401 / 500) + integration (cross-account isolation, ordering, empty); Android `DeviceRepositoryTest` (MockWebServer round-trip, empty response, unknown platform → `Unknown`); `DevicePairingViewModelTest` (Loading→Devices, Loading→ZeroDevices, Loading→Error, selectAndContinue persists, retry recovers)
 
 ### 2.17 Android: dashboard — today
 - [ ] `TodayViewModel` fetching per-app summary

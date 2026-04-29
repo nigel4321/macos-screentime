@@ -383,6 +383,71 @@ func TestStore_ResolveDevice_UnknownToken(t *testing.T) {
 	}
 }
 
+func TestStore_ListDevicesForAccount_ReturnsOnlyThatAccountsDevices(t *testing.T) {
+	pool := dbtest.NewPool(t)
+	store := auth.NewStore(pool)
+	ctx := context.Background()
+
+	macAccount, _ := store.FindOrCreateAccountByIdentity(ctx, auth.Identity{
+		Provider: "apple", Subject: "mac",
+	})
+	otherAccount, _ := store.FindOrCreateAccountByIdentity(ctx, auth.Identity{
+		Provider: "apple", Subject: "other",
+	})
+
+	tok1, _ := auth.GenerateDeviceToken()
+	tok2, _ := auth.GenerateDeviceToken()
+	tok3, _ := auth.GenerateDeviceToken()
+
+	_, err := store.RegisterDevice(ctx, macAccount, auth.PlatformMacOS, "fp-mac-1", auth.HashDeviceToken(tok1))
+	if err != nil {
+		t.Fatalf("register macAccount#1: %v", err)
+	}
+	_, err = store.RegisterDevice(ctx, macAccount, auth.PlatformAndroid, "fp-mac-2", auth.HashDeviceToken(tok2))
+	if err != nil {
+		t.Fatalf("register macAccount#2: %v", err)
+	}
+	_, err = store.RegisterDevice(ctx, otherAccount, auth.PlatformMacOS, "fp-other", auth.HashDeviceToken(tok3))
+	if err != nil {
+		t.Fatalf("register otherAccount: %v", err)
+	}
+
+	devices, err := store.ListDevicesForAccount(ctx, macAccount)
+	if err != nil {
+		t.Fatalf("ListDevicesForAccount: %v", err)
+	}
+	if got, want := len(devices), 2; got != want {
+		t.Fatalf("len(devices): got %d, want %d (cross-account leak?)", got, want)
+	}
+	// ORDER BY created_at ASC + the two registrations were sequential,
+	// so #1 should come first.
+	if devices[0].Fingerprint != "fp-mac-1" || devices[1].Fingerprint != "fp-mac-2" {
+		t.Errorf("ordering: %+v", devices)
+	}
+	for _, d := range devices {
+		if d.CreatedAt.IsZero() {
+			t.Errorf("missing CreatedAt: %+v", d)
+		}
+		if d.LastSeenAt == nil || d.LastSeenAt.IsZero() {
+			// RegisterDevice always sets last_seen_at; defensively
+			// check it wasn't dropped on the way out.
+			t.Errorf("missing LastSeenAt: %+v", d)
+		}
+	}
+
+	// Empty case: a fresh account has no devices, returns []DeviceSummary{}.
+	emptyAccount, _ := store.FindOrCreateAccountByIdentity(ctx, auth.Identity{
+		Provider: "apple", Subject: "empty",
+	})
+	out, err := store.ListDevicesForAccount(ctx, emptyAccount)
+	if err != nil {
+		t.Fatalf("ListDevicesForAccount(empty): %v", err)
+	}
+	if len(out) != 0 {
+		t.Errorf("expected zero devices, got %d", len(out))
+	}
+}
+
 func TestStore_AccountExists(t *testing.T) {
 	pool := dbtest.NewPool(t)
 	store := auth.NewStore(pool)
