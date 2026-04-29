@@ -121,11 +121,21 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Green build on `main`
 
 ### 1.13 Launch at login *(mac-only)*
-*The MacAgent has to be running to collect events; for a parent's machine we want it auto-resumed on every login. macOS treats per-user "start at login" and post-boot launch as the same mechanism, since `NSWorkspace` lives inside a user session — a real boot-time `LaunchDaemon` would run as root before any user logs in and couldn't observe per-user app activations. **Launch-at-login is mandatory by design: there is no in-app opt-out.** The user's only way to disable it is **System Settings → General → Login Items**, which macOS keeps authoritative — `register()` cannot override an explicit user disable.*
+*The MacAgent has to be running to collect events; for a parent's machine we want it auto-resumed on every login. macOS treats per-user "start at login" and post-boot launch as the same mechanism, since `NSWorkspace` lives inside a user session — a real boot-time `LaunchDaemon` would run as root before any user logs in and couldn't observe per-user app activations. **Launch-at-login is mandatory by design: there is no in-app opt-out.** The user's only way to disable it is **System Settings → General → Login Items**, which macOS keeps authoritative — `register()` cannot override an explicit user disable. §1.14 closes that gap for child accounts.*
 - [x] `LoginItem` SPM target with a `LoginItemRegistry` protocol so the menubar code depends on a seam, not directly on `ServiceManagement`
 - [x] `SMAppServiceLoginItemRegistry` production impl (macOS 13+; we target 14+)
 - [x] `ensureEnabled()` runs on every launch — idempotent re-register, no in-app toggle
 - [x] Tests with a fake registry (real `SMAppService` calls only meaningfully run from a properly-bundled `.app` context)
+
+### 1.14 Tamper-resistant launch (system-wide LaunchAgent) *(mac-only)*
+*§1.13's `SMAppService.mainApp` registers a **per-user** login item — meaning a child user can disable MacAgent in their own session via **System Settings → General → Login Items** with no password prompt. To make launch-at-login tamper-resistant on a child's account, we additionally install a **system-wide `LaunchAgent`** at `/Library/LaunchAgents/`, which runs for every user when they log in and which a non-admin child cannot remove. §1.13 and §1.14 are complementary, not replacements: §1.13 keeps the agent live on the parent's account before §1.14's admin install is run, and is what the parent's first launch flips on automatically.*
+- [ ] Choose install vector — **signed `.pkg`** preferred over shell script: single admin prompt, postinstall script runs as root, distributable via the same release pipeline as the `.dmg`
+- [ ] Author `LaunchAgent` plist (`com.macos-screentime.MacAgent.plist`) with `RunAtLoad`, `KeepAlive` (or `LimitLoadToSessionType=Aqua`), `Program` pointing at `/Applications/MacAgent.app/Contents/MacOS/MacAgent`
+- [ ] Postinstall script: copy plist to `/Library/LaunchAgents/`, set `root:wheel`, mode `644`, `launchctl load -w` for the active user
+- [ ] One-time installer entry point — invoked by the parent on each Mac, prompts once for admin via the `.pkg` UI; documented in README (the parent runs this on the child's machine, not in the child's account)
+- [ ] Verify on a non-admin user account: agent launches on login; user cannot remove it from System Settings (system LaunchAgents don't appear in the per-user Login Items list); user cannot delete `/Library/LaunchAgents/com.macos-screentime.MacAgent.plist` without admin password
+- [ ] Document the §1.13 vs §1.14 trade-off in `ARCHITECTURE.md` so the dual-mechanism rationale isn't lost
+- [ ] Hard dependency on §3.9: the LaunchAgent's `Program` path must point at a Developer-ID-signed and notarized `MacAgent.app` binary, otherwise modern macOS Gatekeeper will refuse to launch it from `launchd` even with a valid plist
 
 ---
 
@@ -395,13 +405,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 3.9 Mac release pipeline
 - [ ] Developer ID Application certificate provisioned
+- [ ] Developer ID Installer certificate provisioned *(distinct from the Application cert; required by `productsign` for the `.pkg` in §1.14)*
 - [ ] Codesign in CI using secret-stored `.p12`
-- [ ] `xcrun notarytool submit --wait`
-- [ ] `xcrun stapler staple`
-- [ ] `.dmg` via `create-dmg`
+- [ ] `xcrun notarytool submit --wait` *(notarize both the `.app` inside the `.dmg` and the `.pkg` from §1.14 — Gatekeeper checks both)*
+- [ ] `xcrun stapler staple` (applied to `.app`, `.dmg`, and `.pkg`)
+- [ ] `.dmg` via `create-dmg` for the parent-machine install
+- [ ] `.pkg` produced via `pkgbuild` + `productbuild` for §1.14's tamper-resistant install (bundles `MacAgent.app` + `LaunchAgent` plist, postinstall script drops plist into `/Library/LaunchAgents/`)
 - [ ] `.github/workflows/mac-release.yml` on `mac-v*` tags
-- [ ] Attach `.dmg` to GitHub Release
-- [ ] Install + launch verified on a fresh Mac
+- [ ] Attach both `.dmg` and `.pkg` to the GitHub Release
+- [ ] Install + launch verified on a fresh Mac (both the `.dmg` flow for the parent and the `.pkg` flow on a non-admin child account)
 
 ---
 
