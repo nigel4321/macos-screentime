@@ -60,7 +60,14 @@ func PolicyCurrentHandler(store PolicyStore) http.Handler {
 //
 // On success the response body is the persisted document (with the new
 // version field set); `ETag` carries the new version too.
-func PolicyPutHandler(store PolicyStore) http.Handler {
+//
+// publisher is invoked after a successful write so live subscribers
+// (the WS endpoint) learn the new version. nil is treated as a no-op
+// so handler tests and dev-without-broker setups stay simple.
+func PolicyPutHandler(store PolicyStore, publisher policy.Publisher) http.Handler {
+	if publisher == nil {
+		publisher = policy.NopPublisher{}
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accountID := auth.AccountIDFromContext(r.Context())
 		if accountID == "" {
@@ -121,6 +128,10 @@ func PolicyPutHandler(store PolicyStore) http.Handler {
 		doc.Version = newVersion
 		w.Header().Set(versionETagHeader, formatETag(newVersion))
 		writeJSON(w, http.StatusOK, doc)
+		// Publish after the response is written: the broker is in-process,
+		// so this is fast, but treating it as best-effort means a slow
+		// fan-out can't affect the writer's HTTP latency.
+		publisher.Publish(accountID, newVersion)
 	})
 }
 

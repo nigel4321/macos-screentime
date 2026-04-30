@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/nigel4321/macos-screentime/backend/internal/auth"
+	"github.com/nigel4321/macos-screentime/backend/internal/policy"
 )
 
 // Deps bundles the dependencies the API layer needs to mount its
@@ -33,6 +34,10 @@ type Deps struct {
 	UsageStore UsageStore
 	// PolicyStore backs GET/PUT /v1/policy. nil disables the routes.
 	PolicyStore PolicyStore
+	// PolicyBroker fans new policy versions out to live WebSocket
+	// subscribers. nil disables /v1/policy/subscribe and the PUT
+	// handler treats publishing as a no-op.
+	PolicyBroker *policy.Broker
 }
 
 // NewRouter constructs the public HTTP router with default middleware
@@ -46,6 +51,15 @@ func NewRouter(d Deps) http.Handler {
 	r.Use(echoRequestID)
 
 	r.Method(http.MethodGet, "/healthz", HealthHandler(d.DB))
+
+	// /v1/policy/subscribe authenticates via the first WebSocket
+	// message rather than the HTTP `Authorization` header, so it is
+	// mounted OUTSIDE the Authenticator group. The handler runs the
+	// JWT/account check itself before subscribing.
+	if d.JWTVerifier != nil && d.Store != nil && d.PolicyStore != nil && d.PolicyBroker != nil {
+		r.Method(http.MethodGet, "/v1/policy/subscribe",
+			PolicySubscribeHandler(d.JWTVerifier, d.Store, d.PolicyStore, d.PolicyBroker))
+	}
 
 	if d.Store != nil && d.JWTSigner != nil {
 		if d.AppleVerifier != nil {
@@ -74,10 +88,14 @@ func NewRouter(d Deps) http.Handler {
 					DevicesListHandler(d.Store))
 
 				if d.PolicyStore != nil {
+					var publisher policy.Publisher
+					if d.PolicyBroker != nil {
+						publisher = d.PolicyBroker
+					}
 					r.Method(http.MethodGet, "/v1/policy/current",
 						PolicyCurrentHandler(d.PolicyStore))
 					r.Method(http.MethodPut, "/v1/policy",
-						PolicyPutHandler(d.PolicyStore))
+						PolicyPutHandler(d.PolicyStore, publisher))
 				}
 
 				if d.UsageStore != nil {

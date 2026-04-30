@@ -367,12 +367,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Store integration tests *(round-trip, version increment, stale-expected conflict, two-goroutine race resolves to 1 win + 1 conflict, cross-account isolation)*
 
 ### 3.2 Backend: WebSocket policy subscribe
-- [ ] `WS /v1/policy/subscribe`
-- [ ] Auth handshake on first message
-- [ ] In-memory pub/sub registry
-- [ ] Emit new version on PUT commit
-- [ ] Heartbeat + idle timeout
-- [ ] Document reconnection semantics
+- [x] `WS /v1/policy/subscribe` *(coder/websocket; handler at `internal/api/policy_subscribe_handler.go`)*
+- [x] Auth handshake on first message *(client sends `{"type":"auth","token":"<JWT>"}` within 5s; route mounted outside the HTTP Authenticator group so headers aren't required for browser-style clients)*
+- [x] In-memory pub/sub registry *(`policy.Broker`: per-account map, RWMutex, buffered per-subscriber channel with non-blocking send so slow consumers can't backpressure the PUT path)*
+- [x] Emit new version on PUT commit *(`policy.Publisher` plumbed into `PolicyPutHandler`; published only after a successful write — conflicts and validation errors don't emit)*
+- [x] Heartbeat + idle timeout *(server pings every 30s; idle read deadline 90s; per-write deadline 10s)*
+- [x] Document reconnection semantics *(no history replay — initial frame on connect carries `store.Current().Version`, then live deltas; clients re-fetch `GET /v1/policy/current` to reconcile after a suspected gap)*
 
 ### 3.3 Mac: Family Controls authorization
 - [ ] Entitlement + provisioning profile updates

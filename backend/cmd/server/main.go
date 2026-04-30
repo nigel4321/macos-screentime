@@ -77,6 +77,7 @@ func run() error {
 		deps.DB = pool
 		deps.UsageStore = usage.NewStore(pool)
 		deps.PolicyStore = policy.NewStore(pool)
+		deps.PolicyBroker = policy.NewBroker()
 	}
 	if pool != nil && cfg.JWTSigningKey != "" {
 		signer, err := auth.NewSigner([]byte(cfg.JWTSigningKey))
