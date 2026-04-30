@@ -46,8 +46,8 @@ jobs:
       - name: detekt
         run: ./gradlew detekt
 
-      - name: Unit tests (:core-domain, :core-data)
-        run: ./gradlew :core-domain:test :core-data:testDebugUnitTest
+      - name: Unit tests (:core-domain, :core-data, :feature-dashboard)
+        run: ./gradlew :core-domain:test :core-data:testDebugUnitTest :feature-dashboard:testDebugUnitTest
 
       # Roborazzi renders Compose screens to PNG under
       # build/outputs/roborazzi/ — no emulator needed. The next step

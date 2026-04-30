@@ -31,6 +31,13 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
 
+    // TodayViewModelTest stands up its own Retrofit instance against a
+    // MockWebServer; :core-data uses `implementation` for these, so we
+    // have to re-declare them on the test classpath.
+    testImplementation(libs.retrofit)
+    testImplementation(libs.retrofit.kotlinx.serialization.converter)
+    testImplementation(libs.kotlinx.serialization.json)
+
     // Compose UI test + Roborazzi screenshot capture for `TodayScreen`
     // states. Renders Composables to PNG under
     // build/outputs/roborazzi/ via `recordRoborazziDebug`. CI uploads
