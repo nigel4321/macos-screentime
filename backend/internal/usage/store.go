@@ -202,9 +202,11 @@ func (s *Store) Summarise(ctx context.Context, q SummaryQuery) ([]SummaryRow, er
 	selects := []string{}
 	groups := []string{}
 	if groupBundle {
-		selects = append(selects, "bundle_id")
+		// `bundle_id` lives on both `usage_event` and `app_metadata`
+		// after the LEFT JOIN below, so always qualify with `ue.`.
+		selects = append(selects, "ue.bundle_id")
 		selects = append(selects, "MAX(am.display_name) AS display_name")
-		groups = append(groups, "bundle_id")
+		groups = append(groups, "ue.bundle_id")
 	}
 	if groupDay {
 		selects = append(selects, "to_char(date_trunc('day', started_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day")
