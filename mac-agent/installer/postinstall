@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# Postinstall script for the MacAgent system-wide LaunchAgent (ROADMAP §1.14).
+#
+# Runs as root from the .pkg installer GUI. The .pkg has already deposited
+# /Library/LaunchAgents/com.macagent.MacAgent.plist (and /Applications/MacAgent.app)
+# at this point — pkgbuild handles file placement, this script handles the
+# parts pkgbuild can't: file ownership, perms, and bootstrap into the active
+# user's launchd domain so the agent starts immediately without requiring
+# a logout/login cycle.
+#
+# Re-runnable: every step is idempotent, so an upgrade install behaves the
+# same as a first install.
+
+set -euo pipefail
+
+PLIST_LABEL="com.macagent.MacAgent"
+PLIST_PATH="/Library/LaunchAgents/${PLIST_LABEL}.plist"
+
+if [[ ! -f "${PLIST_PATH}" ]]; then
+    echo "postinstall: ${PLIST_PATH} missing — pkg payload incomplete" >&2
+    exit 1
+fi
+
+# Required by launchd for system-domain agents. Anything else and launchd
+# silently refuses to load the plist.
+chown root:wheel "${PLIST_PATH}"
+chmod 644 "${PLIST_PATH}"
+
+# Identify the user currently logged in at the console. The .pkg GUI runs
+# inside their session, so this is who we want to bootstrap the agent
+# into. Other users will pick it up via RunAtLoad on their next login.
+CONSOLE_USER=$(stat -f "%Su" /dev/console)
+if [[ -z "${CONSOLE_USER}" || "${CONSOLE_USER}" == "root" ]]; then
+    # Headless install (no GUI session). Skip bootstrap; the agent will
+    # load for every user the next time they log in. This is the expected
+    # path for unattended fleet installs.
+    echo "postinstall: no console user — agent will load on next login"
+    exit 0
+fi
+
+CONSOLE_UID=$(id -u "${CONSOLE_USER}")
+DOMAIN="gui/${CONSOLE_UID}"
+
+# bootout first to clear any stale registration (e.g. the postinstall is
+# running as part of an upgrade and the old version is loaded). Failure
+# is fine — it usually means there was nothing to unload.
+launchctl bootout "${DOMAIN}/${PLIST_LABEL}" 2>/dev/null || true
+
+# bootstrap loads the agent into the user's launchd domain and runs it
+# (RunAtLoad=true). Errors here are real — fail the install.
+launchctl bootstrap "${DOMAIN}" "${PLIST_PATH}"
+
+# enable persists "this label is allowed to load" across reboots, in
+# case the user ever ran `launchctl disable` on it (the only way for a
+# non-admin to opt out of a system LaunchAgent — which we accept; we are
+# building a parental-controls tool, not malware).
+launchctl enable "${DOMAIN}/${PLIST_LABEL}"
+
+echo "postinstall: MacAgent LaunchAgent loaded for ${CONSOLE_USER} (uid ${CONSOLE_UID})"
+exit 0

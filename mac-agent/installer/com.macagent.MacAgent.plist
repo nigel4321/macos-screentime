@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        System-wide LaunchAgent for MacAgent (ROADMAP §1.14).
+
+        Installed at /Library/LaunchAgents/com.macagent.MacAgent.plist by the
+        signed .pkg's postinstall script. Because it lives in the system
+        LaunchAgents domain (not ~/Library/LaunchAgents), a non-admin child
+        user cannot remove or disable it without an admin password — and it
+        does not appear in their per-user "Login Items" list at all.
+
+        Label matches the app's PRODUCT_BUNDLE_IDENTIFIER so launchctl
+        commands can target it by bundle id.
+
+        Hard requirement: Program must point at a Developer-ID-signed and
+        notarized binary (ROADMAP §3.9). Modern macOS Gatekeeper refuses
+        to launch unsigned binaries from launchd even with a valid plist.
+    -->
+    <key>Label</key>
+    <string>com.macagent.MacAgent</string>
+
+    <key>Program</key>
+    <string>/Applications/MacAgent.app/Contents/MacOS/MacAgent</string>
+
+    <!-- Launch on user login. -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Restart on unexpected exit so a child cannot just kill -9 it.
+         SuccessfulExit=false means we only respawn on crash, not on a
+         clean Cmd-Q from the menubar (the parent's escape hatch). -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <!-- Aqua = a real graphical login session. Without this, launchd
+         would also try to load the agent in non-GUI session types
+         (e.g. ssh) where NSWorkspace is unavailable. -->
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+
+    <!-- Logs land under each user's caches dir (~/Library/Logs/MacAgent/)
+         so the agent does not need root write access at runtime. The
+         postinstall script seeds the directory with the right perms. -->
+    <key>StandardOutPath</key>
+    <string>/tmp/com.macagent.MacAgent.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/com.macagent.MacAgent.err.log</string>
+
+    <key>ProcessType</key>
+    <string>Interactive</string>
+</dict>
+</plist>
