@@ -167,7 +167,7 @@ func TestBroker_ConcurrentSubscribeAndPublish(_ *testing.T) {
 	wg.Wait()
 }
 
-func TestNopPublisher_Publish(t *testing.T) {
+func TestNopPublisher_Publish(_ *testing.T) {
 	var p Publisher = NopPublisher{}
 	p.Publish("acct-1", 1) // must not panic
 }
