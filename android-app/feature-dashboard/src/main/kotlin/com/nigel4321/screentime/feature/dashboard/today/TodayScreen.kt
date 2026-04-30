@@ -47,7 +47,7 @@ fun TodayScreen(
 }
 
 @Composable
-private fun LoadedBento(
+internal fun LoadedBento(
     rows: List<UsageRow>,
     total: Duration,
     modifier: Modifier = Modifier,

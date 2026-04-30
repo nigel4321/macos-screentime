@@ -1,5 +1,6 @@
 plugins {
     id("screentime.android.feature")
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -29,4 +30,16 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+
+    // Compose UI test + Roborazzi screenshot capture for `TodayScreen`
+    // states. Renders Composables to PNG under
+    // build/outputs/roborazzi/ via `recordRoborazziDebug`. CI uploads
+    // those PNGs as a workflow artifact for human inspection.
+    val composeBom = platform(libs.androidx.compose.bom)
+    testImplementation(composeBom)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
 }
