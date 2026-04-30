@@ -72,7 +72,7 @@ class UsageRepositoryTest {
                 MockResponse().setResponseCode(200).setBody(
                     """
                     {"results":[
-                        {"bundle_id":"com.example.app","duration_seconds":3600},
+                        {"bundle_id":"com.example.app","display_name":"Example","duration_seconds":3600},
                         {"day":"2026-04-29","duration_seconds":7200}
                     ]}
                     """.trimIndent(),
@@ -85,8 +85,13 @@ class UsageRepositoryTest {
 
             assertEquals(2, summary.rows.size)
             assertEquals(BundleId("com.example.app"), summary.rows[0].bundleId)
+            assertEquals("Example", summary.rows[0].displayName)
             assertEquals(3600.seconds, summary.rows[0].duration)
             assertEquals(LocalDate.of(2026, 4, 29), summary.rows[1].day)
+            // Day-grouped row has no display_name in the response — UI
+            // falls back to bundle id, but bundle id is also absent so
+            // null is correct.
+            assertEquals(null, summary.rows[1].displayName)
         }
 
     @Test

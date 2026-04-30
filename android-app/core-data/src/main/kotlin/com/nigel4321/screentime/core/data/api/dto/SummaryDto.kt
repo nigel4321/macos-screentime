@@ -12,5 +12,6 @@ data class SummaryResponse(
 data class SummaryRowDto(
     @SerialName("bundle_id") val bundleId: String? = null,
     @SerialName("day") val day: String? = null,
+    @SerialName("display_name") val displayName: String? = null,
     @SerialName("duration_seconds") val durationSeconds: Long,
 )

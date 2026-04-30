@@ -79,7 +79,7 @@ class ScreentimeApiTest {
         }
 
     @Test
-    fun `usageSummary parses bundle_id and day rows with from-to-groupBy params`() =
+    fun `usageSummary parses bundle_id, display_name, day rows with from-to-groupBy params`() =
         runTest {
             server.enqueue(
                 MockResponse()
@@ -87,7 +87,7 @@ class ScreentimeApiTest {
                     .setBody(
                         """
                         {"results":[
-                            {"bundle_id":"com.example.app","duration_seconds":3600},
+                            {"bundle_id":"com.example.app","display_name":"Example","duration_seconds":3600},
                             {"day":"2026-04-29","duration_seconds":7200}
                         ]}
                         """.trimIndent(),
@@ -103,8 +103,11 @@ class ScreentimeApiTest {
 
             assertEquals(2, response.results.size)
             assertEquals("com.example.app", response.results[0].bundleId)
+            assertEquals("Example", response.results[0].displayName)
             assertEquals(3600L, response.results[0].durationSeconds)
             assertEquals("2026-04-29", response.results[1].day)
+            // omitempty on the server side means absent in JSON → null on the client.
+            assertEquals(null, response.results[1].displayName)
 
             val recorded = server.takeRequest()
             assertEquals("GET", recorded.method)

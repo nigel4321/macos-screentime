@@ -40,7 +40,14 @@ internal fun TopAppTile(
     rank: Int,
     modifier: Modifier = Modifier,
 ) {
-    val name = row.bundleId?.value ?: "Unknown"
+    // Prefer the server-supplied display name (e.g. "Google Chrome");
+    // fall back to the bundle id ("com.google.Chrome") when metadata
+    // hasn't reached the backend yet, and to "Unknown" if even that's
+    // missing.
+    val name =
+        row.displayName?.takeIf { it.isNotBlank() }
+            ?: row.bundleId?.value
+            ?: "Unknown"
     val ratio =
         if (maxDuration > Duration.ZERO) {
             (row.duration.inWholeSeconds.toFloat() / maxDuration.inWholeSeconds.toFloat())
