@@ -7,6 +7,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 /**
@@ -17,10 +19,18 @@ import androidx.compose.ui.unit.dp
  *   (roadmap §4.1). Placeholder copy makes the gap visible.
  * - [DowntimeStatusTile]: policy persistence lands in §3.7. Until then
  *   we render the "no active downtime" steady state.
+ *
+ * Each tile is announced as a single TalkBack unit so the screen reader
+ * doesn't fragment the header from the body copy.
  */
 @Composable
 internal fun CategoriesTile(modifier: Modifier = Modifier) {
-    BentoTile(modifier = modifier) {
+    BentoTile(
+        modifier =
+            modifier.semantics(mergeDescendants = true) {
+                contentDescription = "Categories: coming with category aggregation in 4.1"
+            },
+    ) {
         Column {
             Text(
                 text = "Categories",
@@ -38,7 +48,12 @@ internal fun CategoriesTile(modifier: Modifier = Modifier) {
 
 @Composable
 internal fun DowntimeStatusTile(modifier: Modifier = Modifier) {
-    BentoTile(modifier = modifier) {
+    BentoTile(
+        modifier =
+            modifier.semantics(mergeDescendants = true) {
+                contentDescription = "Downtime: no active downtime"
+            },
+    ) {
         Column {
             Text(
                 text = "Downtime",

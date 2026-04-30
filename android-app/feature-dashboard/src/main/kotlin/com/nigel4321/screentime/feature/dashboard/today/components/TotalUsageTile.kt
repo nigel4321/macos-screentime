@@ -18,7 +18,12 @@ internal fun TotalUsageTile(
     total: Duration,
     modifier: Modifier = Modifier,
 ) {
-    BentoTile(modifier = modifier) {
+    BentoTile(
+        modifier =
+            modifier.semantics(mergeDescendants = true) {
+                contentDescription = "Total today: ${total.formatHuman()}"
+            },
+    ) {
         Column {
             Text(
                 text = "Total today",
@@ -29,10 +34,6 @@ internal fun TotalUsageTile(
             Text(
                 text = total.formatHuman(),
                 style = MaterialTheme.typography.displaySmall,
-                modifier =
-                    Modifier.semantics {
-                        contentDescription = "Total usage today: ${total.formatHuman()}"
-                    },
             )
         }
     }
