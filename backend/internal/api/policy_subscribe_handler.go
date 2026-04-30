@@ -109,7 +109,7 @@ func PolicySubscribeHandler(
 			slog.ErrorContext(r.Context(), "policy ws accept", "err", err)
 			return
 		}
-		defer conn.CloseNow()
+		defer func() { _ = conn.CloseNow() }()
 
 		ctx := r.Context()
 

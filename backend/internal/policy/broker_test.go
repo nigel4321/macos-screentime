@@ -125,19 +125,19 @@ func TestBroker_CleanupRemovesSubscriber(t *testing.T) {
 	}
 }
 
-func TestBroker_CleanupIsIdempotent(t *testing.T) {
+func TestBroker_CleanupIsIdempotent(_ *testing.T) {
 	b := NewBroker()
 	_, cleanup := b.Subscribe("acct-1")
 	cleanup()
 	cleanup() // must not panic
 }
 
-func TestBroker_PublishToNoSubscribersIsHarmless(t *testing.T) {
+func TestBroker_PublishToNoSubscribersIsHarmless(_ *testing.T) {
 	b := NewBroker()
 	b.Publish("acct-nobody", 1) // must not panic
 }
 
-func TestBroker_ConcurrentSubscribeAndPublish(t *testing.T) {
+func TestBroker_ConcurrentSubscribeAndPublish(_ *testing.T) {
 	// Stress: race detector must not flag concurrent Subscribe /
 	// Publish / cleanup operations.
 	b := NewBroker()
