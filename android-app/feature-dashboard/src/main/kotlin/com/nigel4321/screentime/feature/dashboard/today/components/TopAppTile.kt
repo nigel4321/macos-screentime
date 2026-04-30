@@ -57,7 +57,10 @@ internal fun TopAppTile(
         }
 
     BentoTile(
-        modifier = modifier.semantics { contentDescription = "Rank $rank: $name, ${row.duration.formatHuman()}" },
+        modifier =
+            modifier.semantics(mergeDescendants = true) {
+                contentDescription = "Rank $rank: $name, ${row.duration.formatHuman()}"
+            },
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

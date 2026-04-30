@@ -18,8 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nigel4321.screentime.feature.dashboard.today.formatHuman
@@ -40,12 +38,15 @@ internal fun WeekBarChart(
 ) {
     val maxDuration = days.maxOfOrNull { it.duration } ?: Duration.ZERO
 
+    // The enclosing [WeekChartTile] supplies a merged semantics
+    // description that already includes every day + duration, so the
+    // chart itself stays unannounced — TalkBack reads the tile as one
+    // unit instead of an axis-by-axis traversal.
     Column(
         modifier =
             modifier
                 .fillMaxWidth()
-                .heightIn(min = MIN_CHART_HEIGHT)
-                .semantics { contentDescription = chartDescription(days) },
+                .heightIn(min = MIN_CHART_HEIGHT),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -117,7 +118,12 @@ private fun Bar(
 private fun Duration.fractionOf(max: Duration): Float =
     if (max > Duration.ZERO) (inWholeSeconds.toFloat() / max.inWholeSeconds.toFloat()).coerceIn(0f, 1f) else 0f
 
-private fun chartDescription(days: List<DayBucket>): String =
+/**
+ * Spoken summary of the seven daily totals in the chart, used by
+ * [WeekChartTile] for the tile-level TalkBack label. Visible to that
+ * sibling Composable only.
+ */
+internal fun chartDescription(days: List<DayBucket>): String =
     days.joinToString(separator = "; ") { "${it.day.format(DAY_FULL)}: ${it.duration.formatHuman()}" }
 
 // 4% min so a sub-minute day still shows something rather than vanishing

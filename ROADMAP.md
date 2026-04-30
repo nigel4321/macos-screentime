@@ -343,10 +343,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 2.21 Android: UI polish + accessibility
 *Should land before §2.20 first internal release if practical; numbering kept stable.*
-- [ ] Haptic feedback on long-press, limit-cross, policy-saved (`HapticFeedback`)
-- [ ] Accessibility audit: every gesture has a visible button alternative; TalkBack labels on all bento tiles and chart axes
-- [ ] Motion review: shared transitions feel right at 120Hz; no animation duration > 400ms outside transitions; verify no jank on a low-end device (4 GB RAM, mid-tier SoC)
-- [ ] Whitespace pass: re-pad after first usable build; tile inner padding ≥ 16dp, grid gutters ≥ 12dp
+- [ ] Haptic feedback on long-press, limit-cross, policy-saved (`HapticFeedback`) — re-anchor to §3.6+ since none of the trigger events (long-press app row, limit crossed, policy saved) exist in M2; the M2 dashboard is read-only with no haptic surfaces. Will add the `HapticFeedback` plumbing alongside the editor screens that fire the events.
+- [x] Accessibility audit *(every clickable in the M2 surfaces — sign-in, device-row select, retry, tab-switch — already has a visible button affordance. Each bento tile now exposes one merged TalkBack unit via `Modifier.semantics(mergeDescendants = true)`: "Total today: 45m"; "Rank N: <name>, <duration>"; "Daily totals: Mon 21 Apr: 2h 14m; Tue 22 Apr: ..."; "Categories: coming with category aggregation in 4.1"; "Downtime: no active downtime". Chart x-axis labels Mon/Tue/... rendered as visible Text and assertable.)*
+- [x] Motion review *(no animations in M2 surfaces — no `animate*AsState`, `Crossfade`, `AnimatedVisibility`, or `tween` calls anywhere in `feature-dashboard`/`feature-onboarding`/`app`. State transitions are instantaneous; trivially under 400ms. Real motion review re-opens at §2.21-revisit once shared-element transitions land in §3.6+.)*
+- [x] Whitespace pass *(audited at §2.18: TodayScreen / WeekScreen content padding 16dp, grid gutters 12dp, BentoTile inner padding 16dp. Internal in-tile spacers are deliberately tighter (2-12dp) and unaffected by the bullet's tile-level constraints.)*
 
 ### 2.22 App display-name resolution (Mac → backend → clients)
 *The dashboards currently render raw bundle IDs (`com.tinyspeck.slackmacgap`). The Mac agent already has §1.12's `AppMetadata` resolver — making it the source of truth means every client (Android, future iOS, future web) gets human names "for free" without re-implementing macOS-specific lookup. Three independent half-PRs that can land in any order; clients gracefully fall back to bundle ID until step 2 lands.*

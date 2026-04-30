@@ -77,6 +77,8 @@ class TodayScreenSemanticsTest {
         composeRule.setContent {
             ScreentimeTheme { LoadedBento(rows = rows, total = 45.minutes) }
         }
+        // Visible header + value still render — Roborazzi covers the
+        // visual side; this assertion guards the wiring.
         composeRule.onNodeWithText("Total today").assertIsDisplayed()
         composeRule.onNodeWithText("45m").assertIsDisplayed()
         // displayName takes precedence; bundle-id-only row falls back.
@@ -86,5 +88,26 @@ class TodayScreenSemanticsTest {
         // until §3.7 / §4.1 fill them.
         composeRule.onNodeWithText("Categories").assertIsDisplayed()
         composeRule.onNodeWithText("Downtime").assertIsDisplayed()
+    }
+
+    @Test
+    fun loaded_exposes_merged_tile_labels_for_talkback() {
+        val rows =
+            listOf(
+                UsageRow(BundleId("com.a"), null, 30.minutes, displayName = "App A"),
+                UsageRow(BundleId("com.b"), null, 15.minutes),
+            )
+        composeRule.setContent {
+            ScreentimeTheme { LoadedBento(rows = rows, total = 45.minutes) }
+        }
+        // Each bento tile announces itself as one TalkBack unit so the
+        // screen reader doesn't fragment the header from the value.
+        composeRule.onNodeWithContentDescription("Total today: 45m").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Rank 1: App A, 30m").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Rank 2: com.b, 15m").assertIsDisplayed()
+        composeRule
+            .onNodeWithContentDescription("Categories: coming with category aggregation in 4.1")
+            .assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Downtime: no active downtime").assertIsDisplayed()
     }
 }

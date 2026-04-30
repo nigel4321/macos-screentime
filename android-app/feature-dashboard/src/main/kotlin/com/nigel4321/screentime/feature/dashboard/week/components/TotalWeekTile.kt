@@ -19,7 +19,12 @@ internal fun TotalWeekTile(
     total: Duration,
     modifier: Modifier = Modifier,
 ) {
-    BentoTile(modifier = modifier) {
+    BentoTile(
+        modifier =
+            modifier.semantics(mergeDescendants = true) {
+                contentDescription = "Total this week: ${total.formatHuman()}"
+            },
+    ) {
         Column {
             Text(
                 text = "Total this week",
@@ -30,10 +35,6 @@ internal fun TotalWeekTile(
             Text(
                 text = total.formatHuman(),
                 style = MaterialTheme.typography.displaySmall,
-                modifier =
-                    Modifier.semantics {
-                        contentDescription = "Total usage this week: ${total.formatHuman()}"
-                    },
             )
         }
     }
