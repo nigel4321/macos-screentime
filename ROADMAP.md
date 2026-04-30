@@ -343,7 +343,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] Motion review: shared transitions feel right at 120Hz; no animation duration > 400ms outside transitions; verify no jank on a low-end device (4 GB RAM, mid-tier SoC)
 - [ ] Whitespace pass: re-pad after first usable build; tile inner padding ≥ 16dp, grid gutters ≥ 12dp
 
----
+### 2.22 App display-name resolution (Mac → backend → clients)
+*The dashboards currently render raw bundle IDs (`com.tinyspeck.slackmacgap`). The Mac agent already has §1.12's `AppMetadata` resolver — making it the source of truth means every client (Android, future iOS, future web) gets human names "for free" without re-implementing macOS-specific lookup. Three independent half-PRs that can land in any order; clients gracefully fall back to bundle ID until step 2 lands.*
+
+- [ ] **Backend**: new `app_metadata` table keyed `(account_id, bundle_id) → (display_name, updated_at)`. Extend `POST /v1/usage:batchUpload` to accept an optional per-event `display_name` (or a batch-level `app_metadata: { bundle_id → display_name }` map); upsert into `app_metadata` on receipt. `GET /v1/usage:summary` LEFT JOINs and returns `display_name` per row (nullable when never seen). Migration + handler tests + integration test (cross-account isolation, latest-write-wins, empty join).
+- [ ] **Mac agent** *(mac-only)*: `BatchUploader` (§2.10) attaches `display_name` to each event using `AppMetadata.resolveDisplayName(bundleId)`. Also fires a separate upsert when a *new* bundle ID is seen, so clients don't have to wait for the next batch. Tests with the §1.12 fake resolver.
+- [ ] **Android**: `UsageRow.displayName: String?` in `:core-domain`; DTO in `:core-data`; `TopAppTile` and any future tile prefer `displayName` and fall back to `bundleId.value`. Repository test asserts the fallback when `display_name` is null.
 
 ## Milestone 3 — Policy enforcement
 
