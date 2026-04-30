@@ -358,12 +358,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 ## Milestone 3 — Policy enforcement
 
 ### 3.1 Backend: policy mutation
-- [ ] `PUT /v1/policy` handler
-- [ ] Version increment on write
-- [ ] Optimistic concurrency via `If-Match: version`
-- [ ] Server-side policy shape validation
-- [ ] Authz: only account owner writes
-- [ ] Handler tests
+- [x] `PUT /v1/policy` handler
+- [x] Version increment on write
+- [x] Optimistic concurrency via `If-Match: version` *(unique-constraint-backed; concurrent writers translate `(account_id, version)` PK violation into `ErrVersionConflict`)*
+- [x] Server-side policy shape validation *(`policy.Document.Validate` — bundle-id/length bounds, HH:MM time format, weekday allowlist, no zero-length windows, no duplicate days, daily-limit sanity)*
+- [x] Authz: only account owner writes *(account id pulled from JWT context; mounted under the existing `Authenticator` group)*
+- [x] Handler tests *(success, missing/bad/quoted/bare `If-Match`, validation error, version conflict surfacing current doc, body-version-ignored, unauth, store-error)*
+- [x] Store integration tests *(round-trip, version increment, stale-expected conflict, two-goroutine race resolves to 1 win + 1 conflict, cross-account isolation)*
 
 ### 3.2 Backend: WebSocket policy subscribe
 - [ ] `WS /v1/policy/subscribe`
