@@ -4,10 +4,13 @@
 included:
   - Sources
   - Tests
+  - App
 
 excluded:
   - .build
   - .swiftpm
+  - App/build       # xcodebuild's derived-data root when -derivedDataPath=build
+  - App/MacAgent.xcodeproj
 
 disabled_rules:
   - trailing_whitespace        # handled by the editor / formatter
