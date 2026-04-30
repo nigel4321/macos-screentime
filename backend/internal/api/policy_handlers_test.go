@@ -19,8 +19,8 @@ import (
 // keeps a map of accountID → latest document and supports overriding
 // either Current or Put with a hook so tests can inject errors.
 type fakePolicyStore struct {
-	mu      sync.Mutex
-	docs    map[string]policy.Document
+	mu          sync.Mutex
+	docs        map[string]policy.Document
 	currentHook func(ctx context.Context, accountID string) (policy.Document, error)
 	putHook     func(ctx context.Context, accountID string, doc policy.Document, expectedVersion int64) (int64, error)
 }
@@ -145,7 +145,7 @@ func TestPolicyCurrent_Unauthenticated(t *testing.T) {
 
 func TestPolicyCurrent_StorePropagatesError(t *testing.T) {
 	store := newFakePolicyStore()
-	store.currentHook = func(ctx context.Context, accountID string) (policy.Document, error) {
+	store.currentHook = func(_ context.Context, _ string) (policy.Document, error) {
 		return policy.Document{}, errors.New("db down")
 	}
 	h := PolicyCurrentHandler(store)
@@ -357,7 +357,7 @@ func TestPolicyPut_Unauthenticated(t *testing.T) {
 
 func TestPolicyPut_StorePropagatesError(t *testing.T) {
 	store := newFakePolicyStore()
-	store.putHook = func(ctx context.Context, accountID string, doc policy.Document, expectedVersion int64) (int64, error) {
+	store.putHook = func(_ context.Context, _ string, _ policy.Document, _ int64) (int64, error) {
 		return 0, errors.New("db down")
 	}
 	h := PolicyPutHandler(store)
