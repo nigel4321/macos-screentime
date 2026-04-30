@@ -124,7 +124,7 @@ productbuild \
     --package "${COMPONENT_PKG}" \
     --version "${VERSION}" \
     --identifier "com.macagent.MacAgent.distribution" \
-    "${SIGN_ARGS[@]}" \
+    ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"} \
     "${OUTPUT_PKG}"
 
 echo "make-pkg.sh: wrote ${OUTPUT_PKG}"
