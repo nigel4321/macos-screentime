@@ -63,5 +63,16 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload test reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports-${{ github.sha }}
+          path: |
+            android-app/**/build/reports/tests/**
+            android-app/**/build/test-results/**
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: assembleDebug
         run: ./gradlew assembleDebug
