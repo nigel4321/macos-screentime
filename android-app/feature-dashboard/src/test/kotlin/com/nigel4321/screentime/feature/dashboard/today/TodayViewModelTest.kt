@@ -75,6 +75,9 @@ class TodayViewModelTest {
             val vm = viewModel()
 
             vm.refresh()
+            // Drain stateIn's upstream-collector dispatch so the combine
+            // re-emission lands in vm.uiState.value before we read it.
+            advanceUntilIdle()
 
             assertEquals(TodayUiState.Empty, vm.uiState.value)
         }
@@ -95,6 +98,7 @@ class TodayViewModelTest {
             val vm = viewModel()
 
             vm.refresh()
+            advanceUntilIdle()
 
             val state = vm.uiState.value
             assertTrue("got $state", state is TodayUiState.Loaded)
@@ -112,6 +116,7 @@ class TodayViewModelTest {
             val vm = viewModel()
 
             vm.refresh()
+            advanceUntilIdle()
 
             assertTrue(vm.uiState.value is TodayUiState.Error)
         }
@@ -122,6 +127,7 @@ class TodayViewModelTest {
             server.enqueue(MockResponse().setResponseCode(500))
             val vm = viewModel()
             vm.refresh()
+            advanceUntilIdle()
             assertTrue(vm.uiState.value is TodayUiState.Error)
 
             server.enqueue(
@@ -130,6 +136,7 @@ class TodayViewModelTest {
                 ),
             )
             vm.refresh()
+            advanceUntilIdle()
 
             assertTrue(vm.uiState.value is TodayUiState.Loaded)
         }
@@ -150,6 +157,7 @@ class TodayViewModelTest {
             advanceUntilIdle() // let the first call see isInFlight=true
             vm.refresh()
             first.join()
+            advanceUntilIdle()
 
             assertEquals(1, server.requestCount)
             assertEquals(TodayUiState.Empty, vm.uiState.value)
