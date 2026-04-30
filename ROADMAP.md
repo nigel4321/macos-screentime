@@ -300,12 +300,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] Tests: backend unit (success / empty array not null / 401 / 500) + integration (cross-account isolation, ordering, empty); Android `DeviceRepositoryTest` (MockWebServer round-trip, empty response, unknown platform → `Unknown`); `DevicePairingViewModelTest` (Loading→Devices, Loading→ZeroDevices, Loading→Error, selectAndContinue persists, retry recovers)
 
 ### 2.17 Android: dashboard — today
-- [ ] `TodayViewModel` (Hilt) — observes the `:core-data` cache `Flow` for `[startOfDay, now)` grouped by `bundle_id`, refreshes on init / pull-to-refresh / retry; sealed `UiState` (`Loading / Empty / Loaded(rows, totalDuration, isRefreshing) / Error`)
-- [ ] Bento grid via `LazyVerticalGrid(GridCells.Fixed(2))` — total-today (2×1), top-N apps (2×1, hand-rolled horizontal bars), categories placeholder (2×1, "coming with category aggregation in §4.1"), downtime status (2×1, "no active downtime" until §3.7 data lands)
-- [ ] Pull-to-refresh via Material 3 `PullToRefreshBox`
-- [ ] Loading skeleton (4-tile placeholder so layout doesn't pop), error + retry, empty state ("No usage today yet")
-- [ ] `enableEdgeToEdge()` in `MainActivity`
-- [ ] Tests: `TodayViewModelTest` (Loading→Empty, Loading→Loaded sorted desc by duration, Loading→Error, refresh-recovers-from-Error, refresh-while-in-flight is a no-op, query window matches Clock + system zone with `groupBy=bundle_id`); `FormatTest` for the human duration formatter
+- [x] `TodayViewModel` (Hilt) — observes the `:core-data` cache `Flow` for `[startOfDay, now)` grouped by `bundle_id`, refreshes via `LaunchedEffect` / pull-to-refresh / retry; sealed `UiState` (`Loading / Empty / Loaded(rows, totalDuration, isRefreshing) / Error`); `refresh()` is `suspend` so tests can await without racing OkHttp's real-thread I/O
+- [x] Bento grid via `LazyVerticalGrid(GridCells.Fixed(2))` — total-today (2×1), top apps as 1×1 tiles capped at 4 (rank + name + duration + share-of-leader bar), categories placeholder (2×1, "coming with category aggregation in §4.1"), downtime status (2×1, "no active downtime" until §3.7 data lands)
+- [x] Pull-to-refresh via Material 3 `PullToRefreshBox`
+- [x] Loading skeleton (4 full-width placeholder tiles mirroring the loaded shape), error + retry, empty state ("No usage today yet")
+- [x] `enableEdgeToEdge()` in `MainActivity`
+- [x] Tests: `TodayViewModelTest` (initial Loading, Loading→Empty, Loading→Loaded sorted desc by duration, Loading→Error, refresh-recovers-from-Error, refresh-while-in-flight is a no-op, query window matches Clock + system zone with `groupBy=bundle_id`); `FormatTest` for the human duration formatter
 
 *Deferred from §2.17 — re-anchored where their dependencies actually land:*
 - [ ] Vico `CartesianChartHost` chart upgrade (replace the hand-rolled bars in TopAppsTile) — defer to §2.18 since the Week tab also needs charting
