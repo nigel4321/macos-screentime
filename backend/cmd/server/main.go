@@ -21,6 +21,7 @@ import (
 	"github.com/nigel4321/macos-screentime/backend/internal/auth"
 	"github.com/nigel4321/macos-screentime/backend/internal/config"
 	"github.com/nigel4321/macos-screentime/backend/internal/db"
+	"github.com/nigel4321/macos-screentime/backend/internal/policy"
 	"github.com/nigel4321/macos-screentime/backend/internal/usage"
 )
 
@@ -75,6 +76,7 @@ func run() error {
 		// Ping. Only assign when we actually have a pool.
 		deps.DB = pool
 		deps.UsageStore = usage.NewStore(pool)
+		deps.PolicyStore = policy.NewStore(pool)
 	}
 	if pool != nil && cfg.JWTSigningKey != "" {
 		signer, err := auth.NewSigner([]byte(cfg.JWTSigningKey))

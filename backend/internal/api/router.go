@@ -31,6 +31,8 @@ type Deps struct {
 	DeviceTokenMinter DeviceTokenMinter
 	// UsageStore backs /v1/usage:batchUpload. nil disables the route.
 	UsageStore UsageStore
+	// PolicyStore backs GET/PUT /v1/policy. nil disables the routes.
+	PolicyStore PolicyStore
 }
 
 // NewRouter constructs the public HTTP router with default middleware
@@ -71,11 +73,12 @@ func NewRouter(d Deps) http.Handler {
 				r.Method(http.MethodGet, "/v1/devices",
 					DevicesListHandler(d.Store))
 
-				// Stub policy endpoint — empty v0 until persistence
-				// lands in M3. No deps; auth is enforced by the
-				// surrounding Authenticator group.
-				r.Method(http.MethodGet, "/v1/policy/current",
-					PolicyCurrentHandler())
+				if d.PolicyStore != nil {
+					r.Method(http.MethodGet, "/v1/policy/current",
+						PolicyCurrentHandler(d.PolicyStore))
+					r.Method(http.MethodPut, "/v1/policy",
+						PolicyPutHandler(d.PolicyStore))
+				}
 
 				if d.UsageStore != nil {
 					// Summary spans all of the account's devices, so it
