@@ -5,7 +5,7 @@ import com.nigel4321.screentime.core.data.api.ScreentimeApi
 import com.nigel4321.screentime.core.data.repository.UsageRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -61,21 +61,26 @@ class TodayViewModelTest {
     private fun viewModel() = TodayViewModel(repository, clock)
 
     @Test
-    fun `initial state is Loading until refresh completes`() =
+    fun `initial state is Loading before any refresh runs`() =
         runTest(dispatcher) {
-            server.enqueue(MockResponse().setResponseCode(200).setBody("""{"results":[]}"""))
-
             val vm = viewModel()
-            // Before the launch coroutine runs, state is the initial Loading.
-            assertEquals(TodayUiState.Loading, vm.uiState.value)
 
-            advanceUntilIdle()
-            // Empty backend response with no rows yields the Empty state.
-            assertEquals(TodayUiState.Empty, vm.uiState.first())
+            assertEquals(TodayUiState.Loading, vm.uiState.value)
         }
 
     @Test
-    fun `Loading transitions to Loaded when backend returns rows`() =
+    fun `refresh transitions Loading to Empty when backend returns no rows`() =
+        runTest(dispatcher) {
+            server.enqueue(MockResponse().setResponseCode(200).setBody("""{"results":[]}"""))
+            val vm = viewModel()
+
+            vm.refresh()
+
+            assertEquals(TodayUiState.Empty, vm.uiState.value)
+        }
+
+    @Test
+    fun `refresh transitions Loading to Loaded when backend returns rows`() =
         runTest(dispatcher) {
             server.enqueue(
                 MockResponse().setResponseCode(200).setBody(
@@ -87,11 +92,11 @@ class TodayViewModelTest {
                     """.trimIndent(),
                 ),
             )
-
             val vm = viewModel()
-            advanceUntilIdle()
 
-            val state = vm.uiState.first()
+            vm.refresh()
+
+            val state = vm.uiState.value
             assertTrue("got $state", state is TodayUiState.Loaded)
             val loaded = state as TodayUiState.Loaded
             assertEquals(2, loaded.rows.size)
@@ -101,15 +106,14 @@ class TodayViewModelTest {
         }
 
     @Test
-    fun `Loading transitions to Error when backend fails on first fetch`() =
+    fun `refresh transitions Loading to Error when backend fails on first fetch`() =
         runTest(dispatcher) {
             server.enqueue(MockResponse().setResponseCode(500))
-
             val vm = viewModel()
-            advanceUntilIdle()
 
-            val state = vm.uiState.first()
-            assertTrue("got $state", state is TodayUiState.Error)
+            vm.refresh()
+
+            assertTrue(vm.uiState.value is TodayUiState.Error)
         }
 
     @Test
@@ -117,8 +121,8 @@ class TodayViewModelTest {
         runTest(dispatcher) {
             server.enqueue(MockResponse().setResponseCode(500))
             val vm = viewModel()
-            advanceUntilIdle()
-            assertTrue(vm.uiState.first() is TodayUiState.Error)
+            vm.refresh()
+            assertTrue(vm.uiState.value is TodayUiState.Error)
 
             server.enqueue(
                 MockResponse().setResponseCode(200).setBody(
@@ -126,44 +130,44 @@ class TodayViewModelTest {
                 ),
             )
             vm.refresh()
-            advanceUntilIdle()
 
-            assertTrue(vm.uiState.first() is TodayUiState.Loaded)
+            assertTrue(vm.uiState.value is TodayUiState.Loaded)
         }
 
     @Test
-    fun `refresh while in flight is a no-op (does not double-fetch)`() =
+    fun `concurrent refresh while one is in-flight is a no-op (does not double-fetch)`() =
         runTest(dispatcher) {
-            // Single response queued: a second request would block forever,
-            // so if the test passes without timing out we know the second
-            // refresh was suppressed.
+            // Only one response queued — a duplicate dispatch would hang.
             server.enqueue(
                 MockResponse().setResponseCode(200).setBody("""{"results":[]}"""),
             )
-
             val vm = viewModel()
-            // Second invocation before the first finishes; queue has only
-            // one response, so a duplicate dispatch would hang the test.
+
+            // Launch a refresh on a child coroutine so we can fire a
+            // second one while the first is still suspended on HTTP.
+            // The InternalState `isInFlight` guard suppresses the second.
+            val first = launch { vm.refresh() }
+            advanceUntilIdle() // let the first call see isInFlight=true
             vm.refresh()
-            advanceUntilIdle()
+            first.join()
 
             assertEquals(1, server.requestCount)
-            assertEquals(TodayUiState.Empty, vm.uiState.first())
+            assertEquals(TodayUiState.Empty, vm.uiState.value)
         }
 
     @Test
-    fun `windows today using clock and system zone`() =
+    fun `refresh windows today using clock and system zone`() =
         runTest(dispatcher) {
             server.enqueue(MockResponse().setResponseCode(200).setBody("""{"results":[]}"""))
+            val vm = viewModel()
 
-            viewModel()
-            advanceUntilIdle()
+            vm.refresh()
 
             val recorded = server.takeRequest()
             val url = recorded.requestUrl ?: error("missing URL")
-            // 'from' is start-of-day in the system zone; 'to' is now (UTC clock fixed).
             val from = url.queryParameter("from")
             val to = url.queryParameter("to")
+            // 'from' is start-of-day in the system zone; 'to' is now (UTC clock fixed).
             assertTrue("from looks wrong: $from", from?.startsWith("2026-04-") == true)
             assertEquals("2026-04-30T12:00:00Z", to)
             // Should default to grouping by bundle_id.

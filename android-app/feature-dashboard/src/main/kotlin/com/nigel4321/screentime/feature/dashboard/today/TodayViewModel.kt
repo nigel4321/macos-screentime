@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -57,27 +56,33 @@ class TodayViewModel
                 initialValue = TodayUiState.Loading,
             )
 
-        init {
-            refresh()
-        }
-
-        fun refresh() {
+        /**
+         * Performs the refresh and suspends until the call completes.
+         *
+         * Public-suspend so tests can `await` it inside `runTest { … }`
+         * without racing OkHttp's real-thread I/O — the previous
+         * fire-and-forget shape had `advanceUntilIdle()` returning
+         * before the HTTP response landed.
+         *
+         * Call sites:
+         * - `TodayScreen` triggers initial load via `LaunchedEffect(Unit)`.
+         * - Pull-to-refresh wraps it in `rememberCoroutineScope().launch`.
+         */
+        suspend fun refresh() {
             if (refreshState.value.isInFlight) return
             refreshState.update { it.copy(isInFlight = true, lastError = null) }
-            viewModelScope.launch {
-                runCatching { repository.refresh(today.from, today.to, GROUP) }
-                    .onSuccess {
-                        refreshState.update { it.copy(isInFlight = false, lastError = null, hasFetched = true) }
+            runCatching { repository.refresh(today.from, today.to, GROUP) }
+                .onSuccess {
+                    refreshState.update { it.copy(isInFlight = false, lastError = null, hasFetched = true) }
+                }
+                .onFailure { error ->
+                    refreshState.update {
+                        it.copy(
+                            isInFlight = false,
+                            lastError = error.localizedMessage ?: "Couldn't load today's usage",
+                        )
                     }
-                    .onFailure { error ->
-                        refreshState.update {
-                            it.copy(
-                                isInFlight = false,
-                                lastError = error.localizedMessage ?: "Couldn't load today's usage",
-                            )
-                        }
-                    }
-            }
+                }
         }
 
         private fun project(

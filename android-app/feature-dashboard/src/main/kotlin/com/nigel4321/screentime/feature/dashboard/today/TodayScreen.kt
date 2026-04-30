@@ -9,7 +9,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -22,6 +24,7 @@ import com.nigel4321.screentime.feature.dashboard.today.components.ErrorState
 import com.nigel4321.screentime.feature.dashboard.today.components.LoadingSkeleton
 import com.nigel4321.screentime.feature.dashboard.today.components.TopAppsTile
 import com.nigel4321.screentime.feature.dashboard.today.components.TotalUsageTile
+import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,16 +34,20 @@ fun TodayScreen(
     viewModel: TodayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    val triggerRefresh: () -> Unit = { scope.launch { viewModel.refresh() } }
+
+    LaunchedEffect(Unit) { viewModel.refresh() }
 
     PullToRefreshBox(
         modifier = modifier.fillMaxSize(),
         isRefreshing = (state as? TodayUiState.Loaded)?.isRefreshing == true,
-        onRefresh = viewModel::refresh,
+        onRefresh = triggerRefresh,
     ) {
         when (val current = state) {
             TodayUiState.Loading -> LoadingSkeleton()
             TodayUiState.Empty -> EmptyState()
-            is TodayUiState.Error -> ErrorState(message = current.message, onRetry = viewModel::refresh)
+            is TodayUiState.Error -> ErrorState(message = current.message, onRetry = triggerRefresh)
             is TodayUiState.Loaded -> LoadedBento(rows = current.rows, total = current.totalDuration)
         }
     }
