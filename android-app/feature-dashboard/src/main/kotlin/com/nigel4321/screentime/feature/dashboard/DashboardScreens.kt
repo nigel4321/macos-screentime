@@ -6,23 +6,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nigel4321.screentime.feature.dashboard.today.TodayScreen as RealTodayScreen
 
 @Composable
 fun TodayScreen() {
-    Centered(text = "Today — implemented in §2.17")
+    RealTodayScreen()
 }
 
 @Composable
 fun WeekScreen() {
-    Centered(text = "Week — implemented in §2.18")
-}
-
-@Composable
-private fun Centered(text: String) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = text)
+        Text(text = "Week — implemented in §2.18")
     }
 }

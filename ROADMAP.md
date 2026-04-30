@@ -300,17 +300,19 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] Tests: backend unit (success / empty array not null / 401 / 500) + integration (cross-account isolation, ordering, empty); Android `DeviceRepositoryTest` (MockWebServer round-trip, empty response, unknown platform → `Unknown`); `DevicePairingViewModelTest` (Loading→Devices, Loading→ZeroDevices, Loading→Error, selectAndContinue persists, retry recovers)
 
 ### 2.17 Android: dashboard — today
-- [ ] `TodayViewModel` fetching per-app summary
-- [ ] Bento grid via `LazyVerticalGrid(GridCells.Fixed(2))` — total-today (2×1), top-N apps (1×1 each), category breakdown (2×1), downtime status (2×1)
-- [ ] Vico bar chart inside the wide tiles
-- [ ] Edge-to-edge layout (`enableEdgeToEdge()`); translucent top bar + bottom nav using `RenderEffect.createBlurEffect` (lives in `:core-ui`)
-- [ ] Shared-element transition: tap an app tile → expand into app-detail screen (`SharedTransitionLayout`, Compose 1.7+)
-- [ ] Long-press an app row → bottom sheet (set limit / hard block / view week); always reachable from a visible affordance for TalkBack
-- [ ] Pull-to-refresh
-- [ ] Loading skeleton
-- [ ] Error + retry state
-- [ ] Empty state
-- [ ] Compose UI tests for each state
+- [ ] `TodayViewModel` (Hilt) — observes the `:core-data` cache `Flow` for `[startOfDay, now)` grouped by `bundle_id`, refreshes on init / pull-to-refresh / retry; sealed `UiState` (`Loading / Empty / Loaded(rows, totalDuration, isRefreshing) / Error`)
+- [ ] Bento grid via `LazyVerticalGrid(GridCells.Fixed(2))` — total-today (2×1), top-N apps (2×1, hand-rolled horizontal bars), categories placeholder (2×1, "coming with category aggregation in §4.1"), downtime status (2×1, "no active downtime" until §3.7 data lands)
+- [ ] Pull-to-refresh via Material 3 `PullToRefreshBox`
+- [ ] Loading skeleton (4-tile placeholder so layout doesn't pop), error + retry, empty state ("No usage today yet")
+- [ ] `enableEdgeToEdge()` in `MainActivity`
+- [ ] Tests: `TodayViewModelTest` (Loading→Empty, Loading→Loaded sorted desc by duration, Loading→Error, refresh-recovers-from-Error, refresh-while-in-flight is a no-op, query window matches Clock + system zone with `groupBy=bundle_id`); `FormatTest` for the human duration formatter
+
+*Deferred from §2.17 — re-anchored where their dependencies actually land:*
+- [ ] Vico `CartesianChartHost` chart upgrade (replace the hand-rolled bars in TopAppsTile) — defer to §2.18 since the Week tab also needs charting
+- [ ] Translucent (glass) top bar + bottom nav using `RenderEffect.createBlurEffect` — defer to §2.21 polish; `:app` only has a single top-level tab today, so the nav surface to glassify isn't there yet
+- [ ] Shared-element transition (tap app tile → app-detail) — defer until an app-detail screen exists; no destination to transition into in M2
+- [ ] Long-press app row → bottom sheet (set limit / hard block / view week) — defer to §3.6+ when policy-edit endpoints exist; until then the sheet would have no real actions
+- [ ] Compose UI tests per state — defer to §2.18 where Today/Week tab navigation makes them meaningful; ViewModel state-machine tests already lock in the rendering branches
 
 ### 2.18 Android: dashboard — week
 - [ ] `WeekViewModel` fetching per-day summary
