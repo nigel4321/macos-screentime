@@ -177,7 +177,7 @@ func validDocBody(t *testing.T) []byte {
 
 func TestPolicyPut_Success(t *testing.T) {
 	store := newFakePolicyStore()
-	h := PolicyPutHandler(store)
+	h := PolicyPutHandler(store, nil)
 
 	req := authedRequest(t, http.MethodPut, "/v1/policy", "acct-1", validDocBody(t))
 	req.Header.Set("If-Match", `"0"`)
@@ -204,7 +204,7 @@ func TestPolicyPut_Success(t *testing.T) {
 
 func TestPolicyPut_AcceptsBareIntIfMatch(t *testing.T) {
 	store := newFakePolicyStore()
-	h := PolicyPutHandler(store)
+	h := PolicyPutHandler(store, nil)
 
 	req := authedRequest(t, http.MethodPut, "/v1/policy", "acct-1", validDocBody(t))
 	req.Header.Set("If-Match", "0")
@@ -218,7 +218,7 @@ func TestPolicyPut_AcceptsBareIntIfMatch(t *testing.T) {
 
 func TestPolicyPut_MissingIfMatch(t *testing.T) {
 	store := newFakePolicyStore()
-	h := PolicyPutHandler(store)
+	h := PolicyPutHandler(store, nil)
 
 	req := authedRequest(t, http.MethodPut, "/v1/policy", "acct-1", validDocBody(t))
 	rr := httptest.NewRecorder()
@@ -231,7 +231,7 @@ func TestPolicyPut_MissingIfMatch(t *testing.T) {
 
 func TestPolicyPut_BadIfMatch(t *testing.T) {
 	store := newFakePolicyStore()
-	h := PolicyPutHandler(store)
+	h := PolicyPutHandler(store, nil)
 
 	req := authedRequest(t, http.MethodPut, "/v1/policy", "acct-1", validDocBody(t))
 	req.Header.Set("If-Match", "not-a-number")
@@ -245,7 +245,7 @@ func TestPolicyPut_BadIfMatch(t *testing.T) {
 
 func TestPolicyPut_BadJSON(t *testing.T) {
 	store := newFakePolicyStore()
-	h := PolicyPutHandler(store)
+	h := PolicyPutHandler(store, nil)
 
 	req := authedRequest(t, http.MethodPut, "/v1/policy", "acct-1", []byte("{not json"))
 	req.Header.Set("If-Match", `"0"`)
@@ -259,7 +259,7 @@ func TestPolicyPut_BadJSON(t *testing.T) {
 
 func TestPolicyPut_ValidationError(t *testing.T) {
 	store := newFakePolicyStore()
-	h := PolicyPutHandler(store)
+	h := PolicyPutHandler(store, nil)
 
 	doc := policy.Document{
 		AppLimits: []policy.AppLimit{
@@ -289,7 +289,7 @@ func TestPolicyPut_VersionConflict(t *testing.T) {
 		DowntimeWindows: []policy.DowntimeWindow{},
 		BlockList:       []string{"com.example.previous"},
 	}
-	h := PolicyPutHandler(store)
+	h := PolicyPutHandler(store, nil)
 
 	req := authedRequest(t, http.MethodPut, "/v1/policy", "acct-1", validDocBody(t))
 	req.Header.Set("If-Match", `"1"`) // stale
@@ -318,7 +318,7 @@ func TestPolicyPut_BodyVersionIgnored(t *testing.T) {
 	// A hostile body sets version=999 — server must ignore it and use
 	// expectedVersion + 1 from its own state.
 	store := newFakePolicyStore()
-	h := PolicyPutHandler(store)
+	h := PolicyPutHandler(store, nil)
 
 	body := []byte(`{
 		"version": 999,
@@ -343,7 +343,7 @@ func TestPolicyPut_BodyVersionIgnored(t *testing.T) {
 
 func TestPolicyPut_Unauthenticated(t *testing.T) {
 	store := newFakePolicyStore()
-	h := PolicyPutHandler(store)
+	h := PolicyPutHandler(store, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/v1/policy", bytes.NewReader(validDocBody(t)))
 	req.Header.Set("If-Match", `"0"`)
@@ -355,12 +355,99 @@ func TestPolicyPut_Unauthenticated(t *testing.T) {
 	}
 }
 
+// recordingPublisher captures every Publish call so tests can assert
+// that successful PUTs (and only successful PUTs) fan out to the broker.
+type recordingPublisher struct {
+	mu     sync.Mutex
+	events []publishEvent
+}
+
+type publishEvent struct {
+	accountID string
+	version   int64
+}
+
+func (p *recordingPublisher) Publish(accountID string, version int64) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.events = append(p.events, publishEvent{accountID, version})
+}
+
+func (p *recordingPublisher) snapshot() []publishEvent {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := make([]publishEvent, len(p.events))
+	copy(out, p.events)
+	return out
+}
+
+func TestPolicyPut_PublishesNewVersionOnSuccess(t *testing.T) {
+	store := newFakePolicyStore()
+	pub := &recordingPublisher{}
+	h := PolicyPutHandler(store, pub)
+
+	req := authedRequest(t, http.MethodPut, "/v1/policy", "acct-1", validDocBody(t))
+	req.Header.Set("If-Match", `"0"`)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, body=%s", rr.Code, rr.Body.String())
+	}
+
+	events := pub.snapshot()
+	if len(events) != 1 {
+		t.Fatalf("publish count: got %d, want 1 (events=%+v)", len(events), events)
+	}
+	if events[0] != (publishEvent{accountID: "acct-1", version: 1}) {
+		t.Errorf("event: got %+v, want acct-1 v1", events[0])
+	}
+}
+
+func TestPolicyPut_DoesNotPublishOnConflict(t *testing.T) {
+	store := newFakePolicyStore()
+	store.docs["acct-1"] = policy.Document{Version: 3}
+	pub := &recordingPublisher{}
+	h := PolicyPutHandler(store, pub)
+
+	req := authedRequest(t, http.MethodPut, "/v1/policy", "acct-1", validDocBody(t))
+	req.Header.Set("If-Match", `"1"`) // stale → 412
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusPreconditionFailed {
+		t.Fatalf("status: got %d, want 412", rr.Code)
+	}
+	if got := pub.snapshot(); len(got) != 0 {
+		t.Errorf("publish count on conflict: got %d, want 0", len(got))
+	}
+}
+
+func TestPolicyPut_DoesNotPublishOnValidationError(t *testing.T) {
+	store := newFakePolicyStore()
+	pub := &recordingPublisher{}
+	h := PolicyPutHandler(store, pub)
+
+	doc := policy.Document{
+		AppLimits: []policy.AppLimit{{BundleID: "com.example.app", DailyLimitSeconds: 0}},
+	}
+	body, _ := json.Marshal(doc)
+	req := authedRequest(t, http.MethodPut, "/v1/policy", "acct-1", body)
+	req.Header.Set("If-Match", `"0"`)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d, body=%s", rr.Code, rr.Body.String())
+	}
+	if got := pub.snapshot(); len(got) != 0 {
+		t.Errorf("publish count on validation error: got %d, want 0", len(got))
+	}
+}
+
 func TestPolicyPut_StorePropagatesError(t *testing.T) {
 	store := newFakePolicyStore()
 	store.putHook = func(_ context.Context, _ string, _ policy.Document, _ int64) (int64, error) {
 		return 0, errors.New("db down")
 	}
-	h := PolicyPutHandler(store)
+	h := PolicyPutHandler(store, nil)
 
 	req := authedRequest(t, http.MethodPut, "/v1/policy", "acct-1", validDocBody(t))
 	req.Header.Set("If-Match", `"0"`)
