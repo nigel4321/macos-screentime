@@ -324,7 +324,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 ### 2.19 Android CI — extension
 *Foundational CI (workflow file, ktlint, detekt, assembleDebug, Gradle cache) lands in §2.11 so PRs are gated from §2.12 onward. This section adds the bits that depend on later milestones.*
 - [x] CI runs unit tests for `:core-domain` and `:core-data` *(workflow `Unit tests` step added in §2.13; §2.14 will plug in Room cache tests)*
-- [ ] Compose UI tests (or document deferral) *(requires §2.17/§2.18 dashboard tests)*
+- [x] Compose screenshot tests via Roborazzi for `TodayScreen` states (loading / empty / error / loaded); CI uploads PNGs as `today-screenshots-<sha>` artifact for visual review *(no emulator needed — runs as a JVM Robolectric task)*
+- [ ] Functional Compose UI tests (semantic assertions) — defer to §2.18 alongside Today↔Week tab navigation; the Roborazzi step above already gates rendering regressions
 - [ ] CI runs `assembleRelease` *(requires keystore + signing config from §2.20)*
 
 ### 2.20 Android release via Fastlane

@@ -52,6 +52,7 @@ coroutinesTest            = "1.10.1"
 robolectric               = "4.13"
 androidxTestCore          = "1.6.1"
 mockito                   = "5.14.2"
+roborazzi                 = "1.60.0"
 
 [libraries]
 # Compose
@@ -85,6 +86,12 @@ robolectric                       = { module = "org.robolectric:robolectric", ve
 androidx-test-core                = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 room-testing                      = { module = "androidx.room:room-testing", version.ref = "room" }
 mockito-core                      = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+androidx-compose-ui-test          = { module = "androidx.compose.ui:ui-test" }
+androidx-compose-ui-test-junit4   = { module = "androidx.compose.ui:ui-test-junit4" }
+androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+roborazzi                         = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
+roborazzi-compose                 = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
+roborazzi-junit-rule              = { module = "io.github.takahirom.roborazzi:roborazzi-junit-rule", version.ref = "roborazzi" }
 
 # Room
 room-runtime                      = { module = "androidx.room:room-runtime", version.ref = "room" }
@@ -120,3 +127,4 @@ ksp                               = { id = "com.google.devtools.ksp", version.re
 hilt                              = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ktlint                            = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 detekt                            = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+roborazzi                         = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }

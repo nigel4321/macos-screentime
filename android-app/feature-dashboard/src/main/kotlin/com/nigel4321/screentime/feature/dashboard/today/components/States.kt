@@ -38,27 +38,27 @@ internal fun LoadingSkeleton(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(count = 4) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
-                            shape = RoundedCornerShape(20.dp),
-                        ),
-            )
+        // Inline four full-width skeleton tiles so the grid shape
+        // mirrors `TodayScreen.LoadedBento` (which spans 2 cols per
+        // tile). Earlier this used a `items(count, content)` helper
+        // that got silently shadowed by the standard
+        // `LazyGridScope.items(count: Int, …)` overload, so the
+        // skeleton rendered as a 2×2 grid instead. The screenshot
+        // tests caught the regression.
+        repeat(SKELETON_TILE_COUNT) {
+            item(span = { GridItemSpan(2) }) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                shape = RoundedCornerShape(20.dp),
+                            ),
+                )
+            }
         }
-    }
-}
-
-private fun androidx.compose.foundation.lazy.grid.LazyGridScope.items(
-    count: Int,
-    content: @Composable () -> Unit,
-) {
-    repeat(count) {
-        item(span = { GridItemSpan(2) }) { content() }
     }
 }
 
@@ -89,6 +89,8 @@ internal fun ErrorState(
         }
     }
 }
+
+private const val SKELETON_TILE_COUNT = 4
 
 @Composable
 internal fun EmptyState(modifier: Modifier = Modifier) {

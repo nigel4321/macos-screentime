@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   build:
-    name: ktlint + detekt + test + assembleDebug
+    name: ktlint + detekt + test + screenshots + assembleDebug
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,8 +46,33 @@ jobs:
       - name: detekt
         run: ./gradlew detekt
 
-      - name: Unit tests (:core-domain, :core-data)
-        run: ./gradlew :core-domain:test :core-data:testDebugUnitTest
+      - name: Unit tests (:core-domain, :core-data, :feature-dashboard)
+        run: ./gradlew :core-domain:test :core-data:testDebugUnitTest :feature-dashboard:testDebugUnitTest
+
+      # Roborazzi renders Compose screens to PNG under
+      # build/outputs/roborazzi/ — no emulator needed. The next step
+      # uploads the PNGs as a workflow artifact for human inspection.
+      - name: Screenshot tests (:feature-dashboard)
+        run: ./gradlew :feature-dashboard:recordRoborazziDebug
+
+      - name: Upload Today screenshots
+        uses: actions/upload-artifact@v7
+        with:
+          name: today-screenshots-${{ github.sha }}
+          path: android-app/feature-dashboard/build/outputs/roborazzi/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload test reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports-${{ github.sha }}
+          path: |
+            android-app/**/build/reports/tests/**
+            android-app/**/build/test-results/**
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: assembleDebug
         run: ./gradlew assembleDebug

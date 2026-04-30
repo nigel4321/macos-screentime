@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -47,31 +46,43 @@ class TodayViewModel
                 project(summary, refresh)
             }.stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+                // Eager so `uiState.value` always reflects the latest
+                // cache + refresh projection — including under
+                // StandardTestDispatcher, where `WhileSubscribed`'s
+                // lazy startup races with the test's `first()` call.
+                // Cost is negligible: one screen, cheap projection,
+                // viewModelScope cancels on logout.
+                started = SharingStarted.Eagerly,
                 initialValue = TodayUiState.Loading,
             )
 
-        init {
-            refresh()
-        }
-
-        fun refresh() {
+        /**
+         * Performs the refresh and suspends until the call completes.
+         *
+         * Public-suspend so tests can `await` it inside `runTest { … }`
+         * without racing OkHttp's real-thread I/O — the previous
+         * fire-and-forget shape had `advanceUntilIdle()` returning
+         * before the HTTP response landed.
+         *
+         * Call sites:
+         * - `TodayScreen` triggers initial load via `LaunchedEffect(Unit)`.
+         * - Pull-to-refresh wraps it in `rememberCoroutineScope().launch`.
+         */
+        suspend fun refresh() {
             if (refreshState.value.isInFlight) return
             refreshState.update { it.copy(isInFlight = true, lastError = null) }
-            viewModelScope.launch {
-                runCatching { repository.refresh(today.from, today.to, GROUP) }
-                    .onSuccess {
-                        refreshState.update { it.copy(isInFlight = false, lastError = null, hasFetched = true) }
+            runCatching { repository.refresh(today.from, today.to, GROUP) }
+                .onSuccess {
+                    refreshState.update { it.copy(isInFlight = false, lastError = null, hasFetched = true) }
+                }
+                .onFailure { error ->
+                    refreshState.update {
+                        it.copy(
+                            isInFlight = false,
+                            lastError = error.localizedMessage ?: "Couldn't load today's usage",
+                        )
                     }
-                    .onFailure { error ->
-                        refreshState.update {
-                            it.copy(
-                                isInFlight = false,
-                                lastError = error.localizedMessage ?: "Couldn't load today's usage",
-                            )
-                        }
-                    }
-            }
+                }
         }
 
         private fun project(
@@ -128,6 +139,5 @@ class TodayViewModel
 
         private companion object {
             val GROUP = UsageRepository.GroupBy.BundleId
-            const val STOP_TIMEOUT_MS = 5_000L
         }
     }
