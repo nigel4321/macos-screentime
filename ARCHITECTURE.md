@@ -100,6 +100,34 @@ CREATE TABLE policy (
 
 Usage events are append-only. Sync is a pull-unsynced / push / mark-synced loop — safe to crash at any point.
 
+### 2.6 Launch-at-login: a dual mechanism
+
+The agent is useless if it isn't running, so it must auto-start on every login. macOS gives us two non-overlapping mechanisms; we use both, intentionally.
+
+| | §1.13 — `SMAppService.mainApp` | §1.14 — system-wide `LaunchAgent` |
+|---|---|---|
+| Scope | Per-user | All users on the Mac |
+| Where | `~/Library/LaunchAgents/` (managed by SMAppService) | `/Library/LaunchAgents/` |
+| How registered | The app calls `register()` on every launch (idempotent) | A signed `.pkg`'s postinstall script, run as root after one admin prompt |
+| Removable by a non-admin | Yes — System Settings → Login Items → toggle off | No — the plist is `root:wheel 644` and isn't shown in the per-user Login Items list |
+| Requires Developer ID signing | No (works for ad-hoc/debug builds too) | Yes — modern Gatekeeper refuses to launch an unsigned binary from `launchd` (see §3.9) |
+
+The two mechanisms are **complementary, not redundant**:
+
+- **§1.13 is what flips it on.** When the parent first runs MacAgent on their own Mac, no admin install has occurred yet. `SMAppService` lets us self-register on first launch with no privilege escalation, so the agent comes back automatically next login. This is the entire experience for the parent's account.
+- **§1.14 is what makes it stick on a child's account.** If the parent then takes the same Mac and installs it on a child user's machine (or the family's shared Mac with multiple user accounts), `SMAppService` alone leaves the child a one-click off-switch. The system-wide LaunchAgent closes that gap: it loads on every user's login, and a non-admin child cannot disable or delete it.
+
+We do not collapse the two. Replacing §1.13 with §1.14 would block first-run on debug builds and any environment without the signed `.pkg` having been installed; replacing §1.14 with §1.13 would make the tamper-resistance story rest on a checkbox the child can untick. The cost of running both is a few hundred lines of installer code and one redundant `RunAtLoad` per parent login (`launchd` deduplicates by `Label`, so only one process actually runs).
+
+### 2.7 Distribution shapes
+
+Two artifacts ship together from each release tag (see §3.9 in `ROADMAP.md`):
+
+- **`MacAgent.dmg`** — drag-to-Applications install. Targets the parent installing on their own Mac; relies on §1.13 for launch-at-login.
+- **`MacAgent.pkg`** — `pkgbuild`/`productbuild` distribution package containing the `.app` plus the system LaunchAgent plist plus a postinstall script. Targets the parent installing on a Mac where children also have user accounts; activates §1.14.
+
+Both are Developer-ID-signed and notarized. The `.pkg`'s outer signature uses a **Developer ID Installer** certificate (distinct from the Application certificate that signs the binary inside).
+
 ---
 
 ## 3. Sync backend
