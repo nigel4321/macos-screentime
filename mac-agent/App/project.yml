@@ -44,6 +44,21 @@ targets:
         product: AppMetadata
       - package: MacAgentCore
         product: LoginItem
+    preBuildScripts:
+      - name: SwiftLint
+        # Runs SwiftLint over the App/ sources on every build. Uses the
+        # binary that the SwiftLintBuildToolPlugin (declared in the parent
+        # Package.swift) resolves into the SPM artifacts cache, so we don't
+        # need a separate brew/mint install.
+        script: |
+          set -euo pipefail
+          SWIFTLINT="${BUILD_DIR%Build/Products*}SourcePackages/artifacts/swiftlintplugins/SwiftLintBinary/SwiftLintBinary.artifactbundle/macos/swiftlint"
+          if [ ! -x "$SWIFTLINT" ]; then
+            echo "warning: SwiftLint binary not found at $SWIFTLINT (skipping; build the SPM package once to resolve)"
+            exit 0
+          fi
+          "$SWIFTLINT" lint --quiet --config "${SRCROOT}/../.swiftlint.yml" "${SRCROOT}"
+        basedOnDependencyAnalysis: false
     info:
       path: Info.plist
       properties:

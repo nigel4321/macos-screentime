@@ -20,20 +20,20 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 
 ### 1.1 Xcode project setup
 - [x] Create `mac-agent/` directory
-- [ ] Create Xcode workspace `MacAgent.xcworkspace` *(mac-only)*
-- [ ] Create app target `MacAgent` (SwiftUI, macOS) *(mac-only)*
+- [x] Create Xcode workspace `MacAgent.xcworkspace` *(superseded — the xcodeproj's embedded `project.xcworkspace` is the only workspace; a standalone wrapper adds nothing for a single-project, SPM-referencing build, and CI / `xcodebuild` open `MacAgent.xcodeproj` directly)*
+- [x] Create app target `MacAgent` (SwiftUI, macOS) *(`mac-agent/App/project.yml` xcodegen spec → `MacAgent.xcodeproj`; bundle id `com.macagent.MacAgent`, `LSUIElement` menubar app)*
 - [x] Set deployment target to macOS 14.0 *(in `Package.swift`)*
 - [x] Set Swift language version to 5.9 *(`swift-tools-version:5.9`)*
 - [x] Create Swift Package with `Package.swift` at `mac-agent/Package.swift`
-- [ ] Add package as a local dependency of the app target *(mac-only, after app target exists)*
-- [ ] Configure local development code signing *(mac-only)*
+- [x] Add package as a local dependency of the app target *(`MacAgentCore` wired via `path: ../` with `PolicyEngine`, `LocalStore`, `UsageCollector`, `SyncClient`, `AppMetadata`, `LoginItem` products)*
+- [ ] Configure local development code signing *(mac-only — deferred; CI builds ad-hoc via `CODE_SIGNING_ALLOWED=NO`; real signing waits for §3.9 release pipeline)*
 - [x] Decide `.xcodeproj` tracking policy — tracked; user state excluded via root `.gitignore` (documented in `mac-agent/README.md`)
 
 ### 1.2 SwiftLint
 - [x] Add SwiftLint as a Swift Package plugin *(dependency added to `Package.swift`; attached per-target in §1.3+)*
 - [x] Add `.swiftlint.yml` with chosen rule set
-- [ ] Add build-phase script to run SwiftLint on every build *(mac-only — Xcode build phase; SPM plugin covers non-Xcode builds)*
-- [ ] Verify lint fails a deliberately bad commit *(mac-only — requires `swift build` with the plugin, and the first target to exist)*
+- [x] Add build-phase script to run SwiftLint on every build *(`preBuildScripts` SwiftLint phase in `mac-agent/App/project.yml` invokes the SPM-resolved `SwiftLintBinary` against `${SRCROOT}` — `.swiftlint.yml`'s `included: [App, Sources, Tests]` + `excluded: [App/build, App/MacAgent.xcodeproj, .build, .swiftpm]` scope it correctly. SPM plugin remains attached per-target for `swift build` and CI's library tests)*
+- [x] Verify lint fails a deliberately bad commit *(verified live: a 161-char canary in `Sources/PolicyEngine/BundleID.swift` fails `swift build` with `error: Line Length Violation`; a 158-char canary in `App/MacAgentApp.swift` fails `xcodebuild` with the new SwiftLint phase script)*
 
 ### 1.3 PolicyEngine — scaffolding
 - [x] Add `PolicyEngine` product to `Core` package
