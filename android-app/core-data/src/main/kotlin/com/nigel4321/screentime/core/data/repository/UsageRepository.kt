@@ -107,6 +107,7 @@ private fun SummaryRowDto.toEntity(
         cacheKey = cacheKey,
         bundleId = bundleId,
         day = day,
+        displayName = displayName,
         durationSeconds = durationSeconds,
         cachedAt = cachedAt,
     )
@@ -116,4 +117,5 @@ internal fun UsageSummaryRowEntity.toDomain(): UsageRow =
         bundleId = bundleId?.let(::BundleId),
         day = day?.let(LocalDate::parse),
         duration = durationSeconds.seconds,
+        displayName = displayName,
     )

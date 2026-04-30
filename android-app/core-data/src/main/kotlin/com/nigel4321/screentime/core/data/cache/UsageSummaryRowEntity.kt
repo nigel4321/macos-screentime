@@ -20,6 +20,7 @@ data class UsageSummaryRowEntity(
     @ColumnInfo("cache_key") val cacheKey: String,
     @ColumnInfo("bundle_id") val bundleId: String?,
     @ColumnInfo("day") val day: String?,
+    @ColumnInfo("display_name") val displayName: String? = null,
     @ColumnInfo("duration_seconds") val durationSeconds: Long,
     @ColumnInfo("cached_at") val cachedAt: Long,
 )

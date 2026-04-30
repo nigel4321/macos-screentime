@@ -119,17 +119,19 @@ class TodayScreenScreenshotTest {
     @Composable
     private fun LoadedBentoSample() {
         // Calls the same `internal` Composable production renders for
-        // the Loaded state, so the PNG matches what users see.
+        // the Loaded state, so the PNG matches what users see. Sample
+        // mixes apps with server-supplied display names (the §2.22
+        // happy path) and one app without metadata (Terminal) — the
+        // tile should fall back to the bundle id there.
         LoadedBento(
             rows =
                 listOf(
-                    UsageRow(BundleId("com.google.Chrome"), null, 92.minutes),
-                    UsageRow(BundleId("com.tinyspeck.slackmacgap"), null, 51.minutes),
-                    UsageRow(BundleId("com.apple.Terminal"), null, 38.minutes),
-                    UsageRow(BundleId("com.spotify.client"), null, 24.minutes),
-                    UsageRow(BundleId("com.apple.mail"), null, 11.minutes),
+                    UsageRow(BundleId("com.google.Chrome"), null, 92.minutes, displayName = "Google Chrome"),
+                    UsageRow(BundleId("com.tinyspeck.slackmacgap"), null, 51.minutes, displayName = "Slack"),
+                    UsageRow(BundleId("com.apple.Terminal"), null, 38.minutes, displayName = null),
+                    UsageRow(BundleId("com.spotify.client"), null, 24.minutes, displayName = "Spotify"),
                 ),
-            total = 216.minutes,
+            total = 205.minutes,
         )
     }
 }

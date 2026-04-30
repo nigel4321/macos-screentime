@@ -24,7 +24,9 @@ object DatabaseModule {
             context,
             ScreentimeDatabase::class.java,
             ScreentimeDatabase.NAME,
-        ).build()
+        )
+            .addMigrations(ScreentimeDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideUsageSummaryDao(db: ScreentimeDatabase): UsageSummaryDao = db.usageSummaryDao()
