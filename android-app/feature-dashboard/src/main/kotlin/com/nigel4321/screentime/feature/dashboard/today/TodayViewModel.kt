@@ -47,7 +47,13 @@ class TodayViewModel
                 project(summary, refresh)
             }.stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+                // Eager so `uiState.value` always reflects the latest
+                // cache + refresh projection — including under
+                // StandardTestDispatcher, where `WhileSubscribed`'s
+                // lazy startup races with the test's `first()` call.
+                // Cost is negligible: one screen, cheap projection,
+                // viewModelScope cancels on logout.
+                started = SharingStarted.Eagerly,
                 initialValue = TodayUiState.Loading,
             )
 
@@ -128,6 +134,5 @@ class TodayViewModel
 
         private companion object {
             val GROUP = UsageRepository.GroupBy.BundleId
-            const val STOP_TIMEOUT_MS = 5_000L
         }
     }
