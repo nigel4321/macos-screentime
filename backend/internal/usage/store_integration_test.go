@@ -347,3 +347,159 @@ func TestUsageStore_Summarise_EmptyRangeReturnsZero(t *testing.T) {
 		t.Errorf("empty range: got %+v, want single zero row", rows)
 	}
 }
+
+func TestUsageStore_AppMetadata_RoundTripJoinsIntoSummary(t *testing.T) {
+	accountID, deviceID, store, now := withAccountAndDevice(t)
+	ctx := context.Background()
+
+	// Two events for two bundles; only Safari has metadata.
+	_, err := store.InsertEvents(ctx, deviceID, []usage.Event{
+		{ClientEventID: "s1", BundleID: "com.apple.Safari",
+			StartedAt: now.Add(-2 * time.Hour), EndedAt: now.Add(-2*time.Hour + 30*time.Minute)},
+		{ClientEventID: "m1", BundleID: "com.apple.Mail",
+			StartedAt: now.Add(-1 * time.Hour), EndedAt: now.Add(-1*time.Hour + 15*time.Minute)},
+	})
+	if err != nil {
+		t.Fatalf("seed events: %v", err)
+	}
+
+	written, err := store.UpsertAppMetadataBatch(ctx, accountID, map[string]string{
+		"com.apple.Safari": "Safari",
+	})
+	if err != nil {
+		t.Fatalf("upsert metadata: %v", err)
+	}
+	if written != 1 {
+		t.Errorf("written: got %d, want 1", written)
+	}
+
+	rows, err := store.Summarise(ctx, usage.SummaryQuery{
+		AccountID: accountID, From: now.Add(-24 * time.Hour), To: now.Add(time.Hour),
+		GroupBy: []usage.SummaryGroup{usage.GroupByBundle},
+	})
+	if err != nil {
+		t.Fatalf("Summarise: %v", err)
+	}
+	got := map[string]string{}
+	for _, r := range rows {
+		got[r.BundleID] = r.DisplayName
+	}
+	if got["com.apple.Safari"] != "Safari" {
+		t.Errorf("Safari name: got %q, want %q", got["com.apple.Safari"], "Safari")
+	}
+	if got["com.apple.Mail"] != "" {
+		t.Errorf("Mail name: got %q, want empty (no metadata row)", got["com.apple.Mail"])
+	}
+}
+
+func TestUsageStore_AppMetadata_LatestWriteWins(t *testing.T) {
+	accountID, deviceID, store, now := withAccountAndDevice(t)
+	ctx := context.Background()
+
+	_, err := store.InsertEvents(ctx, deviceID, []usage.Event{
+		{ClientEventID: "s1", BundleID: "com.app",
+			StartedAt: now.Add(-1 * time.Hour), EndedAt: now.Add(-1*time.Hour + 30*time.Minute)},
+	})
+	if err != nil {
+		t.Fatalf("seed events: %v", err)
+	}
+
+	if _, err := store.UpsertAppMetadataBatch(ctx, accountID, map[string]string{"com.app": "Old Name"}); err != nil {
+		t.Fatalf("upsert 1: %v", err)
+	}
+	if _, err := store.UpsertAppMetadataBatch(ctx, accountID, map[string]string{"com.app": "New Name"}); err != nil {
+		t.Fatalf("upsert 2: %v", err)
+	}
+
+	rows, err := store.Summarise(ctx, usage.SummaryQuery{
+		AccountID: accountID, From: now.Add(-24 * time.Hour), To: now.Add(time.Hour),
+		GroupBy: []usage.SummaryGroup{usage.GroupByBundle},
+	})
+	if err != nil {
+		t.Fatalf("Summarise: %v", err)
+	}
+	if len(rows) != 1 || rows[0].DisplayName != "New Name" {
+		t.Errorf("latest-write-wins: got %+v", rows)
+	}
+}
+
+func TestUsageStore_AppMetadata_CrossAccountIsolation(t *testing.T) {
+	pool := dbtest.NewPool(t)
+	ctx := context.Background()
+
+	if err := db.EnsurePartitionsAroundNow(ctx, pool, time.Now().UTC()); err != nil {
+		t.Fatalf("ensure partitions: %v", err)
+	}
+
+	authStore := auth.NewStore(pool)
+	a, _ := authStore.FindOrCreateAccountByIdentity(ctx, auth.Identity{Provider: "apple", Subject: "alice"})
+	b, _ := authStore.FindOrCreateAccountByIdentity(ctx, auth.Identity{Provider: "apple", Subject: "bob"})
+
+	tokA, _ := auth.GenerateDeviceToken()
+	tokB, _ := auth.GenerateDeviceToken()
+	devA, _ := authStore.RegisterDevice(ctx, a, auth.PlatformMacOS, "fp-a", auth.HashDeviceToken(tokA))
+	devB, _ := authStore.RegisterDevice(ctx, b, auth.PlatformMacOS, "fp-b", auth.HashDeviceToken(tokB))
+
+	store := usage.NewStore(pool)
+	now := time.Now().UTC()
+	store.SetNow(func() time.Time { return now })
+
+	// Both accounts use the same bundle id; only Alice has metadata.
+	if _, err := store.InsertEvents(ctx, devA, []usage.Event{{
+		ClientEventID: "ea", BundleID: "com.shared",
+		StartedAt: now.Add(-1 * time.Hour), EndedAt: now.Add(-1*time.Hour + 10*time.Minute),
+	}}); err != nil {
+		t.Fatalf("seed alice: %v", err)
+	}
+	if _, err := store.InsertEvents(ctx, devB, []usage.Event{{
+		ClientEventID: "eb", BundleID: "com.shared",
+		StartedAt: now.Add(-1 * time.Hour), EndedAt: now.Add(-1*time.Hour + 20*time.Minute),
+	}}); err != nil {
+		t.Fatalf("seed bob: %v", err)
+	}
+	if _, err := store.UpsertAppMetadataBatch(ctx, a, map[string]string{"com.shared": "Alice's App"}); err != nil {
+		t.Fatalf("upsert alice metadata: %v", err)
+	}
+
+	// Bob's summary must not see Alice's display name.
+	rows, err := store.Summarise(ctx, usage.SummaryQuery{
+		AccountID: b, From: now.Add(-24 * time.Hour), To: now.Add(time.Hour),
+		GroupBy: []usage.SummaryGroup{usage.GroupByBundle},
+	})
+	if err != nil {
+		t.Fatalf("Summarise bob: %v", err)
+	}
+	if len(rows) != 1 || rows[0].DisplayName != "" {
+		t.Errorf("cross-account leak: bob got %+v", rows)
+	}
+}
+
+func TestUsageStore_AppMetadata_EmptyMapIsNoOp(t *testing.T) {
+	accountID, _, store, _ := withAccountAndDevice(t)
+	ctx := context.Background()
+
+	written, err := store.UpsertAppMetadataBatch(ctx, accountID, map[string]string{})
+	if err != nil {
+		t.Fatalf("empty: %v", err)
+	}
+	if written != 0 {
+		t.Errorf("written: got %d, want 0", written)
+	}
+}
+
+func TestUsageStore_AppMetadata_SkipsEmptyValues(t *testing.T) {
+	accountID, _, store, _ := withAccountAndDevice(t)
+	ctx := context.Background()
+
+	written, err := store.UpsertAppMetadataBatch(ctx, accountID, map[string]string{
+		"":         "OK",      // empty bundle id — skipped
+		"com.app":  "",        // empty display name — skipped
+		"com.real": "Real App", // ok
+	})
+	if err != nil {
+		t.Fatalf("upsert: %v", err)
+	}
+	if written != 1 {
+		t.Errorf("written: got %d, want 1 (only com.real should land)", written)
+	}
+}

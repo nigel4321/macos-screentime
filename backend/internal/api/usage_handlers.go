@@ -18,6 +18,7 @@ import (
 type UsageStore interface {
 	InsertEvents(ctx context.Context, deviceID string, events []usage.Event) ([]usage.EventResult, error)
 	Summarise(ctx context.Context, q usage.SummaryQuery) ([]usage.SummaryRow, error)
+	UpsertAppMetadataBatch(ctx context.Context, accountID string, names map[string]string) (int, error)
 }
 
 // MaxBatchSize caps the number of events a single batchUpload request
@@ -26,8 +27,18 @@ type UsageStore interface {
 // this in practice.
 const MaxBatchSize = 500
 
+// MaxAppMetadataEntries caps the size of the optional app_metadata map
+// per request. A typical Mac sees fewer than 50 active apps; 100 is
+// generous headroom while preventing abuse.
+const MaxAppMetadataEntries = 100
+
+// MaxAppMetadataValueLength caps both bundle id and display-name string
+// lengths so a malformed payload can't write unbounded TEXT.
+const MaxAppMetadataValueLength = 256
+
 type batchUploadRequest struct {
-	Events []usage.Event `json:"events"`
+	Events      []usage.Event     `json:"events"`
+	AppMetadata map[string]string `json:"app_metadata,omitempty"`
 }
 
 type batchUploadResponse struct {
@@ -48,7 +59,8 @@ type batchUploadResponse struct {
 // double-lookup on the hot path.
 func BatchUploadHandler(store UsageStore) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if auth.AccountIDFromContext(r.Context()) == "" {
+		accountID := auth.AccountIDFromContext(r.Context())
+		if accountID == "" {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -70,6 +82,27 @@ func BatchUploadHandler(store UsageStore) http.Handler {
 		if len(body.Events) > MaxBatchSize {
 			http.Error(w, "batch too large", http.StatusRequestEntityTooLarge)
 			return
+		}
+		if len(body.AppMetadata) > MaxAppMetadataEntries {
+			http.Error(w, "app_metadata too large", http.StatusRequestEntityTooLarge)
+			return
+		}
+		for bundleID, displayName := range body.AppMetadata {
+			if len(bundleID) > MaxAppMetadataValueLength || len(displayName) > MaxAppMetadataValueLength {
+				http.Error(w, "app_metadata value too long", http.StatusBadRequest)
+				return
+			}
+		}
+
+		// Metadata first so the same request that lands the events
+		// also seeds names — `GET /v1/usage:summary` joins on a fresh
+		// row immediately. The store skips empty bundle ids / names.
+		if len(body.AppMetadata) > 0 {
+			if _, err := store.UpsertAppMetadataBatch(r.Context(), accountID, body.AppMetadata); err != nil {
+				slog.ErrorContext(r.Context(), "upsert app_metadata", "err", err)
+				http.Error(w, "internal error", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		results, err := store.InsertEvents(r.Context(), deviceID, body.Events)

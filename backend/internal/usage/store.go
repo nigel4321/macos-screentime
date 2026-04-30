@@ -86,6 +86,54 @@ func (s *Store) InsertEvents(ctx context.Context, deviceID string, events []Even
 // handler and store operate on the same []Event input.
 var ErrNoEvents = errors.New("usage: no events in batch")
 
+// UpsertAppMetadataBatch inserts or updates the (bundle_id → display_name)
+// pairs for accountID in a single transaction. Empty bundle IDs and
+// empty display names are skipped silently; callers should validate
+// caps at the handler boundary so a malformed payload never reaches
+// the store.
+//
+// "Latest write wins" — re-uploading the same bundle id with a
+// different name overwrites the previous one and bumps updated_at.
+//
+// No-op on an empty map (returns 0, nil).
+func (s *Store) UpsertAppMetadataBatch(ctx context.Context, accountID string, names map[string]string) (int, error) {
+	if accountID == "" {
+		return 0, errors.New("usage: account id required")
+	}
+	if len(names) == 0 {
+		return 0, nil
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return 0, fmt.Errorf("usage: begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	written := 0
+	for bundleID, displayName := range names {
+		if bundleID == "" || displayName == "" {
+			continue
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO app_metadata (account_id, bundle_id, display_name, updated_at)
+			VALUES ($1::uuid, $2, $3, now())
+			ON CONFLICT (account_id, bundle_id) DO UPDATE
+			    SET display_name = EXCLUDED.display_name,
+			        updated_at   = now()
+		`, accountID, bundleID, displayName)
+		if err != nil {
+			return written, fmt.Errorf("usage: upsert app_metadata %q: %w", bundleID, err)
+		}
+		written++
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return written, fmt.Errorf("usage: commit: %w", err)
+	}
+	return written, nil
+}
+
 // SummaryGroup is one axis a Summarise query can group on.
 type SummaryGroup string
 
@@ -97,10 +145,13 @@ const (
 
 // SummaryRow is one aggregate bucket. BundleID is set iff GroupByBundle
 // was requested; Day is set iff GroupByDay was requested. DurationSeconds
-// is always populated.
+// is always populated. DisplayName is populated only when grouping by
+// bundle AND an `app_metadata` row exists for (account, bundle); clients
+// fall back to BundleID when omitted.
 type SummaryRow struct {
 	BundleID        string `json:"bundle_id,omitempty"`
 	Day             string `json:"day,omitempty"` // ISO YYYY-MM-DD in UTC
+	DisplayName     string `json:"display_name,omitempty"`
 	DurationSeconds int64  `json:"duration_seconds"`
 }
 
@@ -144,12 +195,18 @@ func (s *Store) Summarise(ctx context.Context, q SummaryQuery) ([]SummaryRow, er
 
 	// Build the SELECT and GROUP BY clauses dynamically based on the
 	// requested axes. The duration expression is the same in every
-	// case; only the keys vary.
+	// case; only the keys vary. When grouping by bundle we LEFT JOIN
+	// `app_metadata` so the response carries human display names; the
+	// MAX() is safe because (account_id, bundle_id) is the PK so each
+	// group has at most one matching row.
 	selects := []string{}
 	groups := []string{}
 	if groupBundle {
-		selects = append(selects, "bundle_id")
-		groups = append(groups, "bundle_id")
+		// `bundle_id` lives on both `usage_event` and `app_metadata`
+		// after the LEFT JOIN below, so always qualify with `ue.`.
+		selects = append(selects, "ue.bundle_id")
+		selects = append(selects, "MAX(am.display_name) AS display_name")
+		groups = append(groups, "ue.bundle_id")
 	}
 	if groupDay {
 		selects = append(selects, "to_char(date_trunc('day', started_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day")
@@ -159,8 +216,13 @@ func (s *Store) Summarise(ctx context.Context, q SummaryQuery) ([]SummaryRow, er
 
 	sqlStr := "SELECT " + strings.Join(selects, ", ") +
 		" FROM usage_event ue" +
-		" JOIN device d ON d.id = ue.device_id" +
-		" WHERE d.account_id = $1::uuid" +
+		" JOIN device d ON d.id = ue.device_id"
+	if groupBundle {
+		sqlStr += " LEFT JOIN app_metadata am" +
+			"   ON am.account_id = d.account_id" +
+			"  AND am.bundle_id  = ue.bundle_id"
+	}
+	sqlStr += " WHERE d.account_id = $1::uuid" +
 		"   AND ue.started_at >= $2" +
 		"   AND ue.started_at <  $3"
 	if len(groups) > 0 {
@@ -178,10 +240,12 @@ func (s *Store) Summarise(ctx context.Context, q SummaryQuery) ([]SummaryRow, er
 	out := []SummaryRow{}
 	for rows.Next() {
 		var r SummaryRow
+		var displayName *string
 		// scan target list mirrors selects order
 		dest := []any{}
 		if groupBundle {
 			dest = append(dest, &r.BundleID)
+			dest = append(dest, &displayName)
 		}
 		if groupDay {
 			dest = append(dest, &r.Day)
@@ -189,6 +253,9 @@ func (s *Store) Summarise(ctx context.Context, q SummaryQuery) ([]SummaryRow, er
 		dest = append(dest, &r.DurationSeconds)
 		if err := rows.Scan(dest...); err != nil {
 			return nil, fmt.Errorf("usage: scan: %w", err)
+		}
+		if displayName != nil {
+			r.DisplayName = *displayName
 		}
 		out = append(out, r)
 	}
