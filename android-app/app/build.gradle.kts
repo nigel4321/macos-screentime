@@ -48,6 +48,9 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // Today + CalendarMonth icons in DashboardHost's bottom nav.
+    // material-icons-core (transitive via material3) is too small.
+    implementation(libs.androidx.compose.material.icons.extended)
 
     // DI — Hilt
     implementation(libs.hilt.android)
