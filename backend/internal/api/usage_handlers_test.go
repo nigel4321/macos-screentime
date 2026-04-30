@@ -25,6 +25,10 @@ type fakeUsageStore struct {
 	summaryRows []usage.SummaryRow
 	summaryErr  error
 	gotSummary  usage.SummaryQuery
+
+	metadataErr     error
+	gotMetadataAcct string
+	gotMetadata     map[string]string
 }
 
 func (f *fakeUsageStore) InsertEvents(_ context.Context, deviceID string, events []usage.Event) ([]usage.EventResult, error) {
@@ -36,6 +40,12 @@ func (f *fakeUsageStore) InsertEvents(_ context.Context, deviceID string, events
 func (f *fakeUsageStore) Summarise(_ context.Context, q usage.SummaryQuery) ([]usage.SummaryRow, error) {
 	f.gotSummary = q
 	return f.summaryRows, f.summaryErr
+}
+
+func (f *fakeUsageStore) UpsertAppMetadataBatch(_ context.Context, accountID string, names map[string]string) (int, error) {
+	f.gotMetadataAcct = accountID
+	f.gotMetadata = names
+	return len(names), f.metadataErr
 }
 
 func ctxWithAuth(deviceID string) context.Context {
@@ -311,5 +321,116 @@ func TestBatchUpload_DecodesTimes(t *testing.T) {
 	want := time.Date(2026, 4, 27, 11, 0, 0, 0, time.UTC)
 	if !store.gotEvents[0].StartedAt.Equal(want) {
 		t.Errorf("StartedAt: got %v, want %v", store.gotEvents[0].StartedAt, want)
+	}
+}
+
+func TestBatchUpload_AppMetadata_PersistsBeforeEvents(t *testing.T) {
+	store := &fakeUsageStore{
+		results: []usage.EventResult{{ClientEventID: "e1", Status: usage.StatusAccepted}},
+	}
+	body := `{
+		"events":[{"client_event_id":"e1","bundle_id":"com.app","started_at":"2026-04-27T11:00:00Z","ended_at":"2026-04-27T11:30:00Z"}],
+		"app_metadata":{"com.app":"My App"}
+	}`
+
+	h := BatchUploadHandler(store)
+	req := httptest.NewRequest(http.MethodPost, "/v1/usage:batchUpload", strings.NewReader(body))
+	req = req.WithContext(ctxWithAuth("dev-1"))
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, body=%s", rr.Code, rr.Body.String())
+	}
+	if store.gotMetadataAcct != "acct-1" {
+		t.Errorf("metadata account: got %q, want acct-1", store.gotMetadataAcct)
+	}
+	if got := store.gotMetadata["com.app"]; got != "My App" {
+		t.Errorf("metadata name: got %q, want %q", got, "My App")
+	}
+}
+
+func TestBatchUpload_AppMetadata_OmittedFieldIsOK(t *testing.T) {
+	// No `app_metadata` in payload — handler must not call the upsert
+	// path (skip is the no-op-on-empty contract).
+	store := &fakeUsageStore{
+		results: []usage.EventResult{{ClientEventID: "e1", Status: usage.StatusAccepted}},
+	}
+	body := `{"events":[{"client_event_id":"e1","bundle_id":"com.app","started_at":"2026-04-27T11:00:00Z","ended_at":"2026-04-27T11:30:00Z"}]}`
+
+	h := BatchUploadHandler(store)
+	req := httptest.NewRequest(http.MethodPost, "/v1/usage:batchUpload", strings.NewReader(body))
+	req = req.WithContext(ctxWithAuth("dev-1"))
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d", rr.Code)
+	}
+	if store.gotMetadata != nil {
+		t.Errorf("metadata: should not have been called, got %+v", store.gotMetadata)
+	}
+}
+
+func TestBatchUpload_AppMetadata_TooManyEntriesIs413(t *testing.T) {
+	var sb strings.Builder
+	sb.WriteString(`{"events":[{"client_event_id":"e1","bundle_id":"com.app","started_at":"2026-04-27T11:00:00Z","ended_at":"2026-04-27T11:30:00Z"}],"app_metadata":{`)
+	for i := 0; i <= MaxAppMetadataEntries; i++ {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		fmt.Fprintf(&sb, `"com.app%d":"App %d"`, i, i)
+	}
+	sb.WriteString(`}}`)
+
+	h := BatchUploadHandler(&fakeUsageStore{})
+	req := httptest.NewRequest(http.MethodPost, "/v1/usage:batchUpload", strings.NewReader(sb.String()))
+	req = req.WithContext(ctxWithAuth("dev-1"))
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("status: got %d, want 413", rr.Code)
+	}
+}
+
+func TestBatchUpload_AppMetadata_OversizeValueIs400(t *testing.T) {
+	long := strings.Repeat("x", MaxAppMetadataValueLength+1)
+	body := fmt.Sprintf(`{
+		"events":[{"client_event_id":"e1","bundle_id":"com.app","started_at":"2026-04-27T11:00:00Z","ended_at":"2026-04-27T11:30:00Z"}],
+		"app_metadata":{"com.app":%q}
+	}`, long)
+
+	h := BatchUploadHandler(&fakeUsageStore{})
+	req := httptest.NewRequest(http.MethodPost, "/v1/usage:batchUpload", strings.NewReader(body))
+	req = req.WithContext(ctxWithAuth("dev-1"))
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("status: got %d, want 400", rr.Code)
+	}
+}
+
+func TestBatchUpload_AppMetadata_StoreErrorIs500(t *testing.T) {
+	store := &fakeUsageStore{metadataErr: errors.New("db down")}
+	body := `{
+		"events":[{"client_event_id":"e1","bundle_id":"com.app","started_at":"2026-04-27T11:00:00Z","ended_at":"2026-04-27T11:30:00Z"}],
+		"app_metadata":{"com.app":"My App"}
+	}`
+
+	h := BatchUploadHandler(store)
+	req := httptest.NewRequest(http.MethodPost, "/v1/usage:batchUpload", strings.NewReader(body))
+	req = req.WithContext(ctxWithAuth("dev-1"))
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("status: got %d, want 500", rr.Code)
+	}
+	// Insert-events must not have been attempted after the metadata
+	// failure — short-circuit avoids a partial write.
+	if store.gotEvents != nil {
+		t.Errorf("InsertEvents called despite metadata error: %+v", store.gotEvents)
 	}
 }
