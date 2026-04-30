@@ -312,20 +312,24 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [ ] Translucent (glass) top bar + bottom nav using `RenderEffect.createBlurEffect` — defer to §2.21 polish; `:app` only has a single top-level tab today, so the nav surface to glassify isn't there yet
 - [ ] Shared-element transition (tap app tile → app-detail) — defer until an app-detail screen exists; no destination to transition into in M2
 - [ ] Long-press app row → bottom sheet (set limit / hard block / view week) — defer to §3.6+ when policy-edit endpoints exist; until then the sheet would have no real actions
-- [ ] Compose UI tests per state — defer to §2.18 where Today/Week tab navigation makes them meaningful; ViewModel state-machine tests already lock in the rendering branches
+- [x] Compose UI tests per state — `TodayScreenSemanticsTest` covers loading/empty/error/loaded with semantic assertions; landed alongside §2.18 once Today/Week tab nav made them meaningful
 
 ### 2.18 Android: dashboard — week
-- [ ] `WeekViewModel` fetching per-day summary
-- [ ] Vico stacked bars, full-bleed (chart extends to safe-area edges; gridlines respect insets)
-- [ ] Tab navigation between Today and Week
-- [ ] Shared-element transition: tap a day column → expand into day-detail
-- [ ] Compose UI tests
+- [ ] `WeekViewModel` (Hilt) — runs two cache-keyed queries over a 7-day `[startOfRange, now)` window: `groupBy=day` for the chart, `groupBy=bundle_id` for the top-apps tiles. Sealed `UiState` (`Loading / Empty / Loaded(byDay, topApps, totalDuration, isRefreshing) / Error`). `densifyByDay` fills zero-duration buckets so the chart always shows 7 contiguous bars.
+- [ ] Per-day bar chart — hand-rolled `WeekBarChart` (7 columns, proportional heights, day-initial labels, content-description for TalkBack); empty days show the grey track only. Stacked-by-bundle-id upgrade deferred to §2.22-followup once apps have categories (§4.1) so the stacks are meaningful.
+- [ ] `WeekScreen` bento — total-this-week (2×1) + chart tile (2×1) + top-4 apps as 1×1 tiles (reuses `TopAppTile`) + Categories/Downtime placeholders (2×1 each). Pull-to-refresh, loading skeleton, error+retry, empty — same components as Today.
+- [ ] Tab navigation — `DashboardHost` Scaffold + Material 3 `NavigationBar` switching between `TodayScreen` and `WeekScreen` (single `dashboard` route in the auth gate's NavHost). Selection survives configuration change via `rememberSaveable`.
+- [ ] `WeekViewModelTest` mirrors `TodayViewModelTest` (initial-loading, refresh→empty, refresh→loaded with densified 7 days + sorted top apps, refresh→error, refresh recovers from error, concurrent-refresh is a no-op). Compose semantics tests (`TodayScreenSemanticsTest`, `WeekScreenSemanticsTest`) assert state-to-UI wiring; Roborazzi screenshot tests for both screens upload as the existing CI artifact.
+
+*Deferred:*
+- [ ] Stacked-bar chart (per-day, per-bundle stacks) — re-anchor to §2.22-followup after categories aggregation lands; meaningful stacking needs a small set of stable buckets, not raw bundle ids.
+- [ ] Shared-element transition (tap day column → day-detail) — no day-detail screen exists; defer until that screen is needed.
 
 ### 2.19 Android CI — extension
 *Foundational CI (workflow file, ktlint, detekt, assembleDebug, Gradle cache) lands in §2.11 so PRs are gated from §2.12 onward. This section adds the bits that depend on later milestones.*
 - [x] CI runs unit tests for `:core-domain` and `:core-data` *(workflow `Unit tests` step added in §2.13; §2.14 will plug in Room cache tests)*
 - [x] Compose screenshot tests via Roborazzi for `TodayScreen` states (loading / empty / error / loaded); CI uploads PNGs as `today-screenshots-<sha>` artifact for visual review *(no emulator needed — runs as a JVM Robolectric task)*
-- [ ] Functional Compose UI tests (semantic assertions) — defer to §2.18 alongside Today↔Week tab navigation; the Roborazzi step above already gates rendering regressions
+- [x] Functional Compose UI tests (semantic assertions) — `TodayScreenSemanticsTest` and `WeekScreenSemanticsTest` cover loading/empty/error/loaded; landed in §2.18
 - [ ] CI runs `assembleRelease` *(requires keystore + signing config from §2.20)*
 
 ### 2.20 Android release via Fastlane

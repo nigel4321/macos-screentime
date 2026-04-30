@@ -19,8 +19,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.nigel4321.screentime.core.data.repository.SessionState
 import com.nigel4321.screentime.core.ui.theme.ScreentimeTheme
-import com.nigel4321.screentime.feature.dashboard.TodayScreen
-import com.nigel4321.screentime.feature.dashboard.WeekScreen
 import com.nigel4321.screentime.feature.onboarding.OnboardingScreen
 import com.nigel4321.screentime.feature.onboarding.pairing.DevicePairingScreen
 import dagger.hilt.android.AndroidEntryPoint
@@ -43,8 +41,9 @@ class MainActivity : ComponentActivity() {
 private object Routes {
     const val ONBOARDING = "onboarding"
     const val PAIRING = "pairing"
-    const val TODAY = "today"
-    const val WEEK = "week"
+
+    // Single tabbed shell hosting both Today and Week — see DashboardHost.
+    const val DASHBOARD = "dashboard"
 }
 
 @Composable
@@ -80,13 +79,12 @@ private fun ScreentimeNavHost(
 private fun NavGraphBuilder.screentimeGraph() {
     composable(Routes.ONBOARDING) { OnboardingScreen(onAuthenticated = {}) }
     composable(Routes.PAIRING) { DevicePairingScreen() }
-    composable(Routes.TODAY) { TodayScreen() }
-    composable(Routes.WEEK) { WeekScreen() }
+    composable(Routes.DASHBOARD) { DashboardHost() }
 }
 
 private fun SessionState.toRoute(): String =
     when (this) {
         SessionState.Anonymous -> Routes.ONBOARDING
         SessionState.NeedsDevice -> Routes.PAIRING
-        SessionState.Ready -> Routes.TODAY
+        SessionState.Ready -> Routes.DASHBOARD
     }
