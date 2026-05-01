@@ -15,12 +15,12 @@ This policy describes what data the application collects, how it is
 stored, who it is shared with, and how to exercise your rights over
 that data.
 
-If you have questions, contact **nsamaroo@gmail.com**.
+If you have questions, contact **apps@nigel.fr**.
 
 ## Who runs this service
 
 ScreenTime is a small, independently-operated service. The
-operator (the "Service Provider") is **Nigel Samaroo**,
+operator (the "Service Provider") is **Nigel NS**,
 contactable at the address above. The service is not affiliated
 with Apple, Google, or any third-party employer.
 
@@ -102,7 +102,7 @@ You have the right to:
   - **object** to processing or **withdraw** any consent you have
     given.
 
-To exercise any of these rights, email **nsamaroo@gmail.com** from
+To exercise any of these rights, email **apps@nigel.fr** from
 the address registered with your account. We aim to respond within
 30 days. If you are unsatisfied with the response, you may lodge a
 complaint with the UK Information Commissioner's Office (ICO) at
@@ -132,5 +132,5 @@ existing users will be notified via the email address on file.
 
 ## Contact
 
-  - Email: **nsamaroo@gmail.com**
+  - Email: **apps@nigel.fr**
   - Source code: <https://github.com/nigel4321/macos-screentime>
