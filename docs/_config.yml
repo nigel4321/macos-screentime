@@ -1,0 +1,7 @@
+# GitHub Pages config for the docs/ directory. Pages picks up
+# Markdown automatically; we only set a theme and the title so the
+# rendered privacy page has a header.
+
+title: ScreenTime
+description: Parental-controls dashboard for macOS + Android.
+theme: jekyll-theme-minimal
