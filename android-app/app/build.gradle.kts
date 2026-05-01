@@ -8,29 +8,24 @@ plugins {
 }
 
 // Release builds parse the version from the GITHUB_REF_NAME env var
-// (the tag the release workflow checked out, e.g. `android-v0.2.5`).
-// Local dev builds and any push that doesn't carry a tag fall back to
-// the dev defaults below — the build still succeeds without env vars
-// so contributors can `assembleDebug` without ceremony.
+// when (and only when) it carries the `android-v` tag prefix the
+// release workflow uses. Anything else — branch-name pushes, PR
+// builds, local dev — falls back to the dev defaults below so
+// `assembleDebug` keeps working without ceremony.
 //
 // versionCode is monotonic-by-construction: MAJOR*1_000_000 +
 // MINOR*1_000 + PATCH lets us go up to 2.x.x without overflowing
 // int32 and keeps the value readable when triaging Play Store crash
 // reports.
-val releaseVersionName: String =
-    (System.getenv("GITHUB_REF_NAME") ?: "")
-        .removePrefix("android-v")
-        .ifBlank { "0.1.0-dev" }
+val androidTagPattern = Regex("""^android-v(\d+)\.(\d+)\.(\d+)$""")
 
-val releaseVersionCode: Int =
-    if (releaseVersionName == "0.1.0-dev") {
-        1
-    } else {
-        val parts = releaseVersionName.split(".")
-        require(parts.size == 3) { "android-v tag must be android-vMAJOR.MINOR.PATCH, got '$releaseVersionName'" }
-        val (major, minor, patch) = parts.map { it.toInt() }
-        major * 1_000_000 + minor * 1_000 + patch
-    }
+val (releaseVersionName: String, releaseVersionCode: Int) =
+    androidTagPattern.matchEntire(System.getenv("GITHUB_REF_NAME") ?: "")
+        ?.destructured
+        ?.let { (major, minor, patch) ->
+            "$major.$minor.$patch" to (major.toInt() * 1_000_000 + minor.toInt() * 1_000 + patch.toInt())
+        }
+        ?: ("0.1.0-dev" to 1)
 
 android {
     namespace = "com.nigel4321.macosscreentime"
