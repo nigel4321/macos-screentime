@@ -104,6 +104,11 @@ This is the part Google forces to be manual.
   - Default language: English (UK or US)
   - App or game: **App**
   - Free or paid: **Free**
+  - **Package name**: `com.nigel4321.macosscreentime` — must
+    match `applicationId` in `android-app/app/build.gradle.kts`
+    exactly. **This value is permanent**: Play Console will not
+    let you rename it later, and the AAB you upload in step 6 has
+    to declare the same package or the upload is rejected.
   - Tick the developer-program-policies + US-export-laws
     declarations
   - Click **Create app**
