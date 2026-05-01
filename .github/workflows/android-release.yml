@@ -1,0 +1,111 @@
+name: android-release
+
+# Triggered by pushing an `android-vMAJOR.MINOR.PATCH` tag. The job
+# parses the version out of GITHUB_REF_NAME (the tag), builds a
+# signed AAB, and ships it to Play Console via fastlane. Internal
+# track is the default destination; alpha/beta/production are
+# available via the workflow_dispatch input below.
+#
+# Required repo secrets (see android-app/RELEASE.md for setup):
+#   ANDROID_KEYSTORE_BASE64       - upload keystore, base64-encoded
+#   ANDROID_KEYSTORE_PASSWORD     - store password
+#   ANDROID_KEY_ALIAS             - key alias inside the keystore
+#   ANDROID_KEY_PASSWORD          - key password
+#   PLAY_STORE_SERVICE_ACCOUNT_JSON - Play Console service-account
+#                                     JSON, raw text (CI base64s on
+#                                     the fly).
+
+on:
+  push:
+    tags:
+      - "android-v*"
+  # Manual promotion: run the workflow against an existing tag and
+  # pick a non-default track. The tag must already exist on the
+  # branch you trigger from.
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Play Console track"
+        type: choice
+        default: internal
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: build + upload to Play Console
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-app
+
+    env:
+      # Fastlane reads this rather than chasing PATH heuristics.
+      SUPPLY_JSON_KEY: ${{ github.workspace }}/android-app/play-store-service-account.json
+      # Where the workflow writes the decoded keystore. The Gradle
+      # signingConfig in :app/build.gradle.kts reads this directly.
+      RELEASE_KEYSTORE_PATH: ${{ github.workspace }}/android-app/upload.keystore
+      RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Set up Ruby (for fastlane)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: android-app
+
+      # Decode the secrets to disk. Both files are written under the
+      # checkout dir (which is inside the runner's tmp area) and
+      # cleaned up automatically when the job ends; we don't bother
+      # with `mktemp` since the runner is already ephemeral.
+      - name: Decode upload keystore
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RELEASE_KEYSTORE_PATH"
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: Write Play Console service-account JSON
+        run: |
+          printf '%s' "$PLAY_STORE_SERVICE_ACCOUNT_JSON" > "$SUPPLY_JSON_KEY"
+        env:
+          PLAY_STORE_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+
+      # versionCode/Name are read from GITHUB_REF_NAME by the
+      # build script — exporting it explicitly so workflow_dispatch
+      # runs (which still get the tag they were dispatched against)
+      # parse the same way as tag-trigger runs.
+      - name: Build signed AAB
+        run: ./gradlew :app:bundleRelease --no-daemon
+
+      - name: Upload AAB as workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-release-${{ github.ref_name }}
+          path: android-app/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Fastlane upload
+        run: bundle exec fastlane android ${{ github.event.inputs.track || 'internal' }}

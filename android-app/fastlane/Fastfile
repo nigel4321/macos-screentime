@@ -1,0 +1,76 @@
+# Fastlane lanes for shipping the Android app to Google Play.
+#
+# Every lane assumes the surrounding workflow has already produced a
+# signed AAB at app/build/outputs/bundle/release/app-release.aab —
+# either by invoking `:app:bundleRelease` itself, or by setting it as
+# a `dependency` of the supply step. We deliberately keep the lanes
+# thin (just the upload) so the same lane works locally and from CI;
+# the build step lives in Gradle and the workflow.
+#
+# Tracks ladder up production: internal → alpha → beta → production.
+# Promote by re-running with the next lane name on the same tag, OR
+# by using `supply --track-promote-to-track <next>` (not wired here
+# yet — internal-only is the M2 floor).
+
+default_platform(:android)
+
+# Path to the AAB the workflow produces. Single source of truth so
+# the four lanes don't drift.
+RELEASE_AAB = "app/build/outputs/bundle/release/app-release.aab"
+
+# What gets uploaded for each lane:
+#   - aab: the binary (RELEASE_AAB above)
+#   - skip_upload_metadata/changelogs/images: keep the listing intact
+#     until §2.20-revisit adds the listing assets. With these on,
+#     supply only ships the binary, never the description / icons /
+#     screenshots, so a misconfigured `metadata/` tree can't blow
+#     away a hand-curated Play Console listing.
+#   - release_status: set explicitly so a draft never appears in
+#     Play Console without us asking for it.
+COMMON_UPLOAD_OPTIONS = {
+  aab: RELEASE_AAB,
+  skip_upload_metadata: true,
+  skip_upload_changelogs: true,
+  skip_upload_images: true,
+  skip_upload_screenshots: true,
+}.freeze
+
+platform :android do
+  desc "Upload the release AAB to the Play Console internal-testing track."
+  lane :internal do
+    upload_to_play_store(
+      track: "internal",
+      release_status: "draft",
+      **COMMON_UPLOAD_OPTIONS,
+    )
+  end
+
+  desc "Upload the release AAB to the Play Console closed-alpha track."
+  lane :alpha do
+    upload_to_play_store(
+      track: "alpha",
+      release_status: "draft",
+      **COMMON_UPLOAD_OPTIONS,
+    )
+  end
+
+  desc "Upload the release AAB to the Play Console closed-beta track."
+  lane :beta do
+    upload_to_play_store(
+      track: "beta",
+      release_status: "draft",
+      **COMMON_UPLOAD_OPTIONS,
+    )
+  end
+
+  desc "Upload the release AAB to the Play Console production track."
+  lane :production do
+    # Production goes out as a draft too — we never auto-publish.
+    # Promote to live from the Play Console UI after a final review.
+    upload_to_play_store(
+      track: "production",
+      release_status: "draft",
+      **COMMON_UPLOAD_OPTIONS,
+    )
+  end
+end

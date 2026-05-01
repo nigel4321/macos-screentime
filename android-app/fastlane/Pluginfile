@@ -1,0 +1,4 @@
+# No fastlane plugins required. `supply` (used by every lane) is
+# part of fastlane core. This file exists so `bundle install` knows
+# the gemfile contract is intentional, and so future plugins have an
+# obvious home.

@@ -1,0 +1,7 @@
+# Pinned fastlane version so CI builds are reproducible. Bump when
+# we want a new feature; the previous tag still produces an
+# identical environment.
+
+source "https://rubygems.org"
+
+gem "fastlane", "~> 2.224"
