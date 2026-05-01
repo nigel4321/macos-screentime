@@ -7,6 +7,11 @@ which builds a signed AAB and uploads it to the Play Console. Tracks:
 default by re-running the workflow via `workflow_dispatch` with the
 `track` input.
 
+> **First time?** The five GitHub secrets and the Play Console
+> listing have to exist before any of this runs. The full
+> onboarding walkthrough lives in [`PLAYSTORE-SETUP.md`](./PLAYSTORE-SETUP.md).
+> Come back to this file once setup is complete.
+
 ## Versioning
 
 Tags are parsed by `app/build.gradle.kts`:
