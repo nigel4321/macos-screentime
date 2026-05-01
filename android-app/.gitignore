@@ -10,3 +10,12 @@ captures/
 *.aab
 *.keystore
 .idea/
+# Fastlane / Bundler runtime artefacts
+.bundle/
+vendor/bundle/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+# Service-account JSON for Play Console; never commit.
+play-store-service-account.json

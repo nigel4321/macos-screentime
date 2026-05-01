@@ -1,0 +1,12 @@
+# App-level configuration shared by every lane. Both values are
+# pulled from env so the same Appfile works locally (with a path on
+# disk) and from CI (where the workflow writes the secret JSON to a
+# scratch file and exports its path).
+
+package_name "com.nigel4321.macosscreentime"
+
+# Path to the Google Play service-account JSON key. Required for any
+# `upload_to_play_store` call. Set via the SUPPLY_JSON_KEY env var by
+# the release workflow; locally, point it at a file you've decrypted
+# yourself — never commit the JSON to the repo.
+json_key_file ENV.fetch("SUPPLY_JSON_KEY", "")

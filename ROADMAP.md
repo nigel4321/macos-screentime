@@ -330,15 +330,17 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 - [x] CI runs unit tests for `:core-domain` and `:core-data` *(workflow `Unit tests` step added in §2.13; §2.14 will plug in Room cache tests)*
 - [x] Compose screenshot tests via Roborazzi for `TodayScreen` states (loading / empty / error / loaded); CI uploads PNGs as `today-screenshots-<sha>` artifact for visual review *(no emulator needed — runs as a JVM Robolectric task)*
 - [x] Functional Compose UI tests (semantic assertions) — `TodayScreenSemanticsTest` and `WeekScreenSemanticsTest` cover loading/empty/error/loaded; landed in §2.18
-- [ ] CI runs `assembleRelease` *(requires keystore + signing config from §2.20)*
+- [~] CI runs `assembleRelease` *(signing config from §2.20 is in place; the dedicated `assembleRelease` step in `.github/workflows/android.yml` is still pending — `android-release.yml` exercises `bundleRelease` end-to-end on every `android-v*` tag, which is the harder check)*
 
 ### 2.20 Android release via Fastlane
-- [ ] `fastlane/` under `android-app/`
-- [ ] `Fastfile` with `internal` lane
-- [ ] Play Store service-account JSON (user-provided secret)
-- [ ] Upload keystore secret
-- [ ] `.github/workflows/android-release.yml` on `android-v*` tags
-- [ ] First successful internal-track upload
+- [x] `fastlane/` under `android-app/` *(`Fastfile`, `Appfile`, `Pluginfile`; pinned via `Gemfile` ~> 2.224)*
+- [x] `Fastfile` with `internal` lane *(plus `alpha` / `beta` / `production` — every lane uploads as `release_status: draft` so nothing reaches users without a manual roll-out click)*
+- [x] `:app` signing config + tag-driven version *(`build.gradle.kts` parses `GITHUB_REF_NAME`: `android-vMAJOR.MINOR.PATCH` → `versionName=MAJOR.MINOR.PATCH`, `versionCode=MAJOR*1_000_000 + MINOR*1_000 + PATCH`; release `signingConfig` reads `RELEASE_KEYSTORE_PATH` / `_PASSWORD` / `RELEASE_KEY_ALIAS` / `RELEASE_KEY_PASSWORD` env vars; absent vars degrade gracefully to unsigned for local dev)*
+- [x] `.github/workflows/android-release.yml` on `android-v*` tags *(also `workflow_dispatch` with a `track` input for promoting an existing tag up the alpha→beta→production ladder; uploads the AAB as a workflow artifact regardless)*
+- [x] Local end-to-end validation *(built signed `app-release.aab` against tag `android-v0.2.5` with a throwaway keystore; merged manifest reports `versionCode=2005, versionName="0.2.5"`; jarsigner confirms signature attached)*
+- [ ] Play Store service-account JSON (user-provided secret) *(see `android-app/RELEASE.md` for the Play Console + GCP setup; secret name `PLAY_STORE_SERVICE_ACCOUNT_JSON`)*
+- [ ] Upload keystore secrets (user-provided) *(`ANDROID_KEYSTORE_BASE64` + `ANDROID_KEYSTORE_PASSWORD` + `ANDROID_KEY_ALIAS` + `ANDROID_KEY_PASSWORD`; `keytool` + `base64` recipe in `RELEASE.md`)*
+- [ ] First successful internal-track upload *(blocked on Play Console listing creation + the Play-required first-manual-upload — doc'd in `RELEASE.md`)*
 - [ ] Verify install on a tester device
 
 ### 2.21 Android: UI polish + accessibility
