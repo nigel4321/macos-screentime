@@ -30,6 +30,7 @@ final class SyncClientTests: XCTestCase {
                    credentials: credentials,
                    dao: dao,
                    fingerprint: "fp-1",
+                   resolver: FakeAppMetadataResolver(),
                    session: session,
                    backoff: Backoff(base: 0.001, cap: 0.001, random: { _ in 0.001 }),
                    maxAttempts: maxAttempts,

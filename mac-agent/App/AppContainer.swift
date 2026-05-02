@@ -1,3 +1,4 @@
+import AppMetadata
 import Foundation
 import IOKit
 import LocalStore
@@ -65,7 +66,8 @@ final class AppContainer {
             baseURL: baseURL,
             credentials: credentials,
             dao: dao,
-            fingerprint: Self.deviceFingerprint()
+            fingerprint: Self.deviceFingerprint(),
+            resolver: SystemAppMetadataResolver()
         )
         loginItem = LoginItemController.makeDefault()
 

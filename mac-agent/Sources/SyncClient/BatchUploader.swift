@@ -1,5 +1,7 @@
+import AppMetadata
 import Foundation
 import LocalStore
+import PolicyEngine
 import os
 
 /// Drains unsynced rows from `UsageEventDAO` and POSTs them to
@@ -14,10 +16,16 @@ import os
 ///     unsynced would re-upload them on every flush.
 public actor BatchUploader {
     public static let maxBatchSize = 500
+    /// Backend `MaxAppMetadataEntries`. We mirror the cap here so a noisy
+    /// page (somehow >100 unique bundles in one batch) doesn't get the
+    /// whole request rejected with 413; we drop the overflow and trust the
+    /// next batch to upsert the remainder.
+    public static let maxAppMetadataEntries = 100
 
     private let api: APIClient
     private let dao: UsageEventDAO
     private let registrar: DeviceRegistrar
+    private let resolver: AppMetadataResolver
     private let clock: @Sendable () -> Date
     private let logger = Logger(subsystem: "com.macos-screentime.MacAgent", category: "BatchUploader")
 
@@ -25,11 +33,13 @@ public actor BatchUploader {
         api: APIClient,
         dao: UsageEventDAO,
         registrar: DeviceRegistrar,
+        resolver: AppMetadataResolver,
         clock: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.api = api
         self.dao = dao
         self.registrar = registrar
+        self.resolver = resolver
         self.clock = clock
     }
 
@@ -43,7 +53,10 @@ public actor BatchUploader {
     }
 
     private struct UploadRequest: Encodable {
+        // swiftlint:disable identifier_name
         let events: [EventDTO]
+        let app_metadata: [String: String]?
+        // swiftlint:enable identifier_name
     }
 
     private struct EventResultDTO: Decodable {
@@ -73,14 +86,17 @@ public actor BatchUploader {
             if pending.isEmpty { break }
 
             let page = Array(pending.prefix(Self.maxBatchSize))
-            let payload = UploadRequest(events: page.map {
-                EventDTO(
-                    client_event_id: $0.clientEventID,
-                    bundle_id: $0.event.bundleID.value,
-                    started_at: $0.event.start,
-                    ended_at: $0.event.end
-                )
-            })
+            let payload = UploadRequest(
+                events: page.map {
+                    EventDTO(
+                        client_event_id: $0.clientEventID,
+                        bundle_id: $0.event.bundleID.value,
+                        started_at: $0.event.start,
+                        ended_at: $0.event.end
+                    )
+                },
+                app_metadata: resolveAppMetadata(for: page)
+            )
 
             let response: UploadResponse = try await api.send(
                 method: "POST",
@@ -111,5 +127,25 @@ public actor BatchUploader {
             if page.count < Self.maxBatchSize { break }
         }
         return totalSynced
+    }
+
+    /// Build the optional batch-level `app_metadata` map for this page.
+    /// The resolver returns the bundle id itself when it can't find an
+    /// installed app, so entries that round-trip back to the bundle id
+    /// are dropped — sending them would just pollute the backend's
+    /// `app_metadata` table with names indistinguishable from the key.
+    /// Returns `nil` when nothing resolves so the JSON omits the field.
+    private func resolveAppMetadata(for page: [UnsyncedUsageEvent]) -> [String: String]? {
+        var seen: Set<String> = []
+        var map: [String: String] = [:]
+        for row in page {
+            let bundleID = row.event.bundleID
+            if !seen.insert(bundleID.value).inserted { continue }
+            let resolved = resolver.displayName(for: bundleID)
+            if resolved == bundleID.value { continue }
+            map[bundleID.value] = resolved
+            if map.count >= Self.maxAppMetadataEntries { break }
+        }
+        return map.isEmpty ? nil : map
     }
 }
