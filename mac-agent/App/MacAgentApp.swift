@@ -18,18 +18,16 @@ struct MacAgentApp: App {
         }
         .menuBarExtraStyle(.window)
         .commands {
-            // SwiftUI doesn't expose a hookable terminate event, so we rely
-            // on `NSApplication.willTerminateNotification` via an observer
-            // installed as a side-effect of `body` being constructed.
-            CommandGroup(replacing: .appTermination) {
-                Button("Quit Screen Time") {
-                    Task {
-                        await container.flush()
-                        NSApplication.shared.terminate(nil)
-                    }
-                }
-                .keyboardShortcut("q", modifiers: .command)
-            }
+            // Tamper-resistance: the agent must keep running on a child's
+            // account, so we strip the in-app exit affordances. An empty
+            // .appTermination group removes both the menu item *and* the
+            // Cmd-Q binding. macOS's force-quit (Activity Monitor / ⌘⌥⎋)
+            // still works — §1.14's LaunchAgent KeepAlive respawns those.
+            // The parent has the same constraint on their own machine; to
+            // actually stop the agent they use Activity Monitor or
+            // launchctl. This matches the §1.13 ARCHITECTURE note that
+            // launch-at-login is mandatory by design.
+            CommandGroup(replacing: .appTermination) { }
         }
     }
 }

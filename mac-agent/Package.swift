@@ -80,14 +80,14 @@ let package = Package(
         ),
         .target(
             name: "SyncClient",
-            dependencies: ["PolicyEngine", "LocalStore"],
+            dependencies: ["PolicyEngine", "LocalStore", "AppMetadata"],
             plugins: [
                 .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]
         ),
         .testTarget(
             name: "SyncClientTests",
-            dependencies: ["SyncClient", "PolicyEngine", "LocalStore"],
+            dependencies: ["SyncClient", "PolicyEngine", "LocalStore", "AppMetadata"],
             plugins: [
                 .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
             ]

@@ -57,7 +57,7 @@ final class BatchUploaderTests: XCTestCase {
             return (response, Data(payload.utf8))
         }
 
-        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar)
+        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar, resolver: FakeAppMetadataResolver())
         let synced = try await uploader.flush()
         XCTAssertEqual(synced, 3)
         XCTAssertTrue(try dao.fetchUnsynced().isEmpty)
@@ -79,7 +79,7 @@ final class BatchUploaderTests: XCTestCase {
             return (response, Data(payload.utf8))
         }
 
-        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar)
+        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar, resolver: FakeAppMetadataResolver())
         let synced = try await uploader.flush()
         // accepted + duplicate + rejected all mark synced — rejected is
         // permanent so we don't want it re-queued forever.
@@ -97,7 +97,7 @@ final class BatchUploaderTests: XCTestCase {
             return (response, Data(payload.utf8))
         }
 
-        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar)
+        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar, resolver: FakeAppMetadataResolver())
         _ = try await uploader.flush()
 
         let req = try XCTUnwrap(MockURLProtocol.capturedRequests.first)
@@ -116,6 +116,102 @@ final class BatchUploaderTests: XCTestCase {
         XCTAssertNotNil(events[0]["ended_at"])
     }
 
+    func testFlushAttachesAppMetadataForResolvedBundles() async throws {
+        // Two distinct bundle ids; resolver knows one and not the other.
+        // Expect the request to carry only the resolved entry.
+        try dao.insert(UsageEvent(
+            bundleID: BundleID("com.google.Chrome"),
+            start: Date(timeIntervalSince1970: 1_700_000_000),
+            end: Date(timeIntervalSince1970: 1_700_000_005)
+        ))
+        try dao.insert(UsageEvent(
+            bundleID: BundleID("com.unknown.app"),
+            start: Date(timeIntervalSince1970: 1_700_000_010),
+            end: Date(timeIntervalSince1970: 1_700_000_015)
+        ))
+        let ids = try dao.fetchUnsynced().map(\.clientEventID)
+
+        MockURLProtocol.requestHandler = { _ in
+            let body = ids.map { #"{"client_event_id":"\#($0)","status":"accepted"}"# }.joined(separator: ",")
+            let payload = #"{"results":[\#(body)]}"#
+            // swiftlint:disable:next force_unwrapping
+            let response = HTTPURLResponse(url: URL(string: "https://example.test/v1/usage:batchUpload")!,
+                                           statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data(payload.utf8))
+        }
+
+        let resolver = FakeAppMetadataResolver(names: ["com.google.Chrome": "Google Chrome"])
+        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar, resolver: resolver)
+        _ = try await uploader.flush()
+
+        let req = try XCTUnwrap(MockURLProtocol.capturedRequests.first)
+        let body = try XCTUnwrap(req.httpBody)
+        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+
+        let appMetadata = try XCTUnwrap(json["app_metadata"] as? [String: String])
+        XCTAssertEqual(appMetadata, ["com.google.Chrome": "Google Chrome"])
+    }
+
+    func testFlushDeduplicatesRepeatedBundleIDs() async throws {
+        // Three events sharing one bundle id should produce a single
+        // app_metadata entry, not three duplicates.
+        for offset in stride(from: 0, to: 30, by: 10) {
+            try dao.insert(UsageEvent(
+                bundleID: BundleID("com.tinyspeck.slackmacgap"),
+                start: Date(timeIntervalSince1970: TimeInterval(1_700_000_000 + offset)),
+                end: Date(timeIntervalSince1970: TimeInterval(1_700_000_005 + offset))
+            ))
+        }
+        let ids = try dao.fetchUnsynced().map(\.clientEventID)
+
+        MockURLProtocol.requestHandler = { _ in
+            let body = ids.map { #"{"client_event_id":"\#($0)","status":"accepted"}"# }.joined(separator: ",")
+            let payload = #"{"results":[\#(body)]}"#
+            // swiftlint:disable:next force_unwrapping
+            let response = HTTPURLResponse(url: URL(string: "https://example.test/v1/usage:batchUpload")!,
+                                           statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data(payload.utf8))
+        }
+
+        let resolver = FakeAppMetadataResolver(names: ["com.tinyspeck.slackmacgap": "Slack"])
+        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar, resolver: resolver)
+        _ = try await uploader.flush()
+
+        let req = try XCTUnwrap(MockURLProtocol.capturedRequests.first)
+        let body = try XCTUnwrap(req.httpBody)
+        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+
+        let appMetadata = try XCTUnwrap(json["app_metadata"] as? [String: String])
+        XCTAssertEqual(appMetadata, ["com.tinyspeck.slackmacgap": "Slack"])
+        // Resolver was consulted only once thanks to in-page dedupe.
+        XCTAssertEqual(resolver.capturedLookups, ["com.tinyspeck.slackmacgap"])
+    }
+
+    func testFlushOmitsAppMetadataWhenNothingResolves() async throws {
+        // Resolver returns the bundle id itself for every lookup — that's
+        // the "no display name available" signal. The request must not
+        // include an `app_metadata` field at all (omitempty on the wire),
+        // so the backend doesn't write entries with name == bundle id.
+        let ids = try seed(2)
+
+        MockURLProtocol.requestHandler = { _ in
+            let body = ids.map { #"{"client_event_id":"\#($0)","status":"accepted"}"# }.joined(separator: ",")
+            let payload = #"{"results":[\#(body)]}"#
+            // swiftlint:disable:next force_unwrapping
+            let response = HTTPURLResponse(url: URL(string: "https://example.test/v1/usage:batchUpload")!,
+                                           statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data(payload.utf8))
+        }
+
+        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar, resolver: FakeAppMetadataResolver())
+        _ = try await uploader.flush()
+
+        let req = try XCTUnwrap(MockURLProtocol.capturedRequests.first)
+        let body = try XCTUnwrap(req.httpBody)
+        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertNil(json["app_metadata"], "no resolved names → field must be omitted")
+    }
+
     func testEmptyQueueIsNoop() async throws {
         // No seed; flush must not call the network.
         MockURLProtocol.requestHandler = { _ in
@@ -123,7 +219,7 @@ final class BatchUploaderTests: XCTestCase {
             throw URLError(.badURL)
         }
 
-        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar)
+        let uploader = BatchUploader(api: api, dao: dao, registrar: registrar, resolver: FakeAppMetadataResolver())
         let synced = try await uploader.flush()
         XCTAssertEqual(synced, 0)
         XCTAssertEqual(MockURLProtocol.capturedRequests.count, 0)

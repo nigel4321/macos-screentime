@@ -1,3 +1,4 @@
+import AppMetadata
 import Foundation
 import IOKit
 import LocalStore
@@ -65,7 +66,8 @@ final class AppContainer {
             baseURL: baseURL,
             credentials: credentials,
             dao: dao,
-            fingerprint: Self.deviceFingerprint()
+            fingerprint: Self.deviceFingerprint(),
+            resolver: SystemAppMetadataResolver()
         )
         loginItem = LoginItemController.makeDefault()
 
@@ -99,22 +101,6 @@ final class AppContainer {
         }
 
         startPeriodicFlush()
-    }
-
-    /// Closes any open usage event and pushes one final batch to the server.
-    /// Called on app quit; the await is bounded by the SyncClient's own
-    /// `maxAttempts` × `backoff.cap`, so quit cannot hang indefinitely.
-    func flush() async {
-        collector.flush()
-        let outcome = await syncClient.flush()
-        switch outcome {
-        case .completed(let synced) where synced > 0:
-            logger.info("on-quit flush synced \(synced) events")
-        case .gaveUp(let lastError):
-            logger.error("on-quit flush gave up: \(String(describing: lastError), privacy: .public)")
-        default:
-            break
-        }
     }
 
     /// Wipes JWT + device id + device token and flips the menubar UI back

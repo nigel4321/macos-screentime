@@ -1,3 +1,4 @@
+import AppMetadata
 import Foundation
 import LocalStore
 import os
@@ -31,6 +32,7 @@ public actor SyncClient {
         credentials: CredentialStore,
         dao: UsageEventDAO,
         fingerprint: String,
+        resolver: AppMetadataResolver,
         session: URLSession = .shared,
         backoff: Backoff = Backoff(),
         maxAttempts: Int = 4,
@@ -40,7 +42,7 @@ public actor SyncClient {
         self.api = api
         self.credentials = credentials
         self.registrar = DeviceRegistrar(api: api, credentials: credentials, fingerprint: fingerprint)
-        self.uploader = BatchUploader(api: api, dao: dao, registrar: self.registrar)
+        self.uploader = BatchUploader(api: api, dao: dao, registrar: self.registrar, resolver: resolver)
         self.backoff = backoff
         self.maxAttempts = maxAttempts
         self.sleepNanos = sleepNanos
