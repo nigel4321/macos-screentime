@@ -87,8 +87,18 @@ mkdir -p "${PAYLOAD_ROOT}/Library/LaunchAgents"
 
 # ditto preserves bundle structure (symlinks under Frameworks/, code-signing
 # resources). cp -R is unsafe for signed app bundles.
-ditto "${APP_PATH}" "${PAYLOAD_ROOT}/Applications/$(basename "${APP_PATH}")"
+APP_BASENAME="$(basename "${APP_PATH}")"
+PAYLOAD_APP="${PAYLOAD_ROOT}/Applications/${APP_BASENAME}"
+ditto "${APP_PATH}" "${PAYLOAD_APP}"
 cp "${PLIST_SRC}" "${PAYLOAD_ROOT}/Library/LaunchAgents/"
+
+# Strip com.apple.quarantine from the payload copy. The flag is a download
+# marker carried in by the source .app (e.g. a CI artifact zip extracted by
+# Safari) and survives the ditto above. Left in place, it causes Gatekeeper
+# to reject the installed app on first launch with a misleading "damaged"
+# message. Once §3.9's notarized release pipeline lands, stapler will have
+# already cleared this on the binary — the strip becomes a no-op then.
+xattr -dr com.apple.quarantine "${PAYLOAD_APP}" 2>/dev/null || true
 
 # Scripts dir holds postinstall (and preinstall, if we ever need one).
 # pkgbuild expects executable files here; we copy with mode preserved.
