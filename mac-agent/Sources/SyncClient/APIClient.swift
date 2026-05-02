@@ -52,12 +52,15 @@ public final class APIClient: Sendable {
     /// Send a JSON `POST`/`GET` request and decode the response. The
     /// `requireDeviceToken` flag picks which auth headers to attach: device
     /// registration only needs the JWT, but `usage:batchUpload` also needs
-    /// the device token.
+    /// the device token. `requireJWT` defaults to true; sign-in endpoints
+    /// (e.g. `POST /v1/auth/apple`) opt out so they can be called before any
+    /// JWT exists.
     public func send<Request: Encodable, Response: Decodable>(
         method: String,
         path: String,
         body: Request?,
         requireDeviceToken: Bool,
+        requireJWT: Bool = true,
         responseType: Response.Type = Response.self
     ) async throws -> Response {
         let url = baseURL.appendingPathComponent(path)
@@ -66,10 +69,12 @@ public final class APIClient: Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        guard let jwt = try credentials.readJWT(), !jwt.isEmpty else {
-            throw APIError.missingCredentials
+        if requireJWT {
+            guard let jwt = try credentials.readJWT(), !jwt.isEmpty else {
+                throw APIError.missingCredentials
+            }
+            request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
         }
-        request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
 
         if requireDeviceToken {
             guard let token = try credentials.readDeviceToken(), !token.isEmpty else {

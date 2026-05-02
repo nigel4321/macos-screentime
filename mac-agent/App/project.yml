@@ -25,12 +25,15 @@ targets:
         excludes:
           - project.yml
           - MacAgent.xcodeproj
+          - MacAgent.entitlements
+          - build           # xcodebuild's derived-data root when -derivedDataPath=build
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.macagent.MacAgent
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: ""
         INFOPLIST_FILE: Info.plist
+        CODE_SIGN_ENTITLEMENTS: MacAgent.entitlements
     dependencies:
       - package: MacAgentCore
         product: PolicyEngine

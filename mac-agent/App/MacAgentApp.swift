@@ -6,7 +6,15 @@ struct MacAgentApp: App {
 
     var body: some Scene {
         MenuBarExtra("Screen Time", systemImage: "timer") {
-            TodayView(viewModel: container.todayViewModel)
+            switch container.authPhase {
+            case .unauthenticated:
+                OnboardingView(viewModel: container.onboardingViewModel)
+            case .authenticated:
+                TodayView(
+                    viewModel: container.todayViewModel,
+                    onSignOut: { Task { await container.signOut() } }
+                )
+            }
         }
         .menuBarExtraStyle(.window)
         .commands {

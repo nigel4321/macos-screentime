@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TodayView: View {
     var viewModel: TodayViewModel
+    var onSignOut: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -13,7 +14,7 @@ struct TodayView: View {
                 appList
             }
             Divider()
-            quitButton
+            footer
         }
         .frame(width: 280)
     }
@@ -51,14 +52,22 @@ struct TodayView: View {
         .padding(.vertical, 4)
     }
 
-    private var quitButton: some View {
-        Button("Quit MacAgent") {
-            NSApplication.shared.terminate(nil)
+    private var footer: some View {
+        VStack(spacing: 0) {
+            Button("Sign out") { onSignOut() }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            Button("Quit MacAgent") {
+                NSApplication.shared.terminate(nil)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
     }
 }
