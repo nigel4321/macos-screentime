@@ -52,22 +52,15 @@ struct TodayView: View {
         .padding(.vertical, 4)
     }
 
+    // No "Quit" button — see MacAgentApp's empty .appTermination
+    // CommandGroup. Sign-out is the only in-app exit; the agent itself
+    // keeps running.
     private var footer: some View {
-        VStack(spacing: 0) {
-            Button("Sign out") { onSignOut() }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-            Button("Quit MacAgent") {
-                NSApplication.shared.terminate(nil)
-            }
+        Button("Sign out") { onSignOut() }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-        }
     }
 }
