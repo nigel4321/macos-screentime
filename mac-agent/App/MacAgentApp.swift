@@ -6,15 +6,16 @@ struct MacAgentApp: App {
 
     var body: some Scene {
         MenuBarExtra("Screen Time", systemImage: "timer") {
-            switch container.authPhase {
-            case .unauthenticated:
-                OnboardingView(viewModel: container.onboardingViewModel)
-            case .authenticated:
-                TodayView(
-                    viewModel: container.todayViewModel,
-                    onSignOut: { Task { await container.signOut() } }
-                )
-            }
+            // TodayView always shows: usage collection runs locally
+            // regardless of auth, so hiding the data behind sign-in helps
+            // nobody. The footer adapts based on container.authPhase to
+            // show SIWA (unauth) or Sign out (auth).
+            TodayView(
+                viewModel: container.todayViewModel,
+                authViewModel: container.onboardingViewModel,
+                authPhase: container.authPhase,
+                onSignOut: { Task { await container.signOut() } }
+            )
         }
         .menuBarExtraStyle(.window)
         .commands {
