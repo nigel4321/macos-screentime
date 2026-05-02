@@ -229,13 +229,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress
 > **§2.10 ships an offline-capable SyncClient** that no-ops gracefully when no JWT is present. It cannot actually push events end-to-end until §2.10a lands.
 
 ### 2.10a Mac agent: Apple Sign-In *(mac-only)*
-- [ ] `AuthenticationServices` `Sign in with Apple` button on `OnboardingView`
-- [ ] `ASAuthorizationController` flow → Apple identity token
-- [ ] Exchange identity token for backend JWT via `POST /v1/auth/apple`
-- [ ] Persist JWT in Keychain via the `CredentialStore` from §2.10
-- [ ] First-launch flow: sign in → register device → start periodic flush
-- [ ] Sign-out menubar action (clears JWT + device token)
-- [ ] Tests with a fake `ASAuthorizationController` and `URLProtocol` mock backend
+- [x] `AuthenticationServices` `Sign in with Apple` button on `OnboardingView` *(SwiftUI's `SignInWithAppleButton`; entitlement `com.apple.developer.applesignin = ["Default"]` lives in `mac-agent/App/MacAgent.entitlements`, wired via `CODE_SIGN_ENTITLEMENTS` in xcodegen)*
+- [x] `ASAuthorizationController` flow → Apple identity token *(driven by `SignInWithAppleButton.onCompletion`; identity token extracted from `ASAuthorizationAppleIDCredential.identityToken` and handed to the VM)*
+- [x] Exchange identity token for backend JWT via `POST /v1/auth/apple` *(`SyncClient.AuthClient.signInWithApple(identityToken:)`; `APIClient.send` gained `requireJWT: Bool = true` so this and future public endpoints can opt out of the Authorization header)*
+- [x] Persist JWT in Keychain via the `CredentialStore` from §2.10 *(success path writes `jwt` via `KeychainCredentialStore`)*
+- [x] First-launch flow: sign in → register device → start periodic flush *(`AppContainer.onAuthenticated` flips `authPhase` and triggers an immediate `SyncClient.flush()`, which calls `DeviceRegistrar.register()` idempotently — device row appears on the backend within ~1s of sign-in instead of waiting up to 60s for the next periodic tick)*
+- [x] Sign-out menubar action (clears JWT + device token) *("Sign out" button in `TodayView` calls `AppContainer.signOut() → AuthClient.signOut() → CredentialStore.clear()` and flips `authPhase` back to `.unauthenticated`, re-routing the menubar to `OnboardingView`)*
+- [x] Tests with a fake `ASAuthorizationController` and `URLProtocol` mock backend *(9 new tests: `AuthClientTests` × 4 covers the network exchange + sign-out, `OnboardingViewModelTests` × 5 covers the state machine — idle→loading→idle, 401→error w/ Apple wording, 5xx→error w/ network wording, dismissError, retry-recovers-from-error. The "fake `ASAuthorizationController`" is realised by calling `viewModel.signIn(identityToken:)` directly with a synthetic token — the SwiftUI `SignInWithAppleButton` itself is a thin extractor and not unit-tested)*
 
 ### 2.11 Android: project setup
 - [x] Init `android-app/` Gradle project

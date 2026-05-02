@@ -2,20 +2,34 @@ import Foundation
 import IOKit
 import LocalStore
 import LoginItem
+import Observation
 import SyncClient
 import UsageCollector
 import os
 
 /// Owns every long-lived dependency and wires them together.
 /// Created once at app launch and torn down on quit.
+@Observable
 @MainActor
 final class AppContainer {
     let todayViewModel: TodayViewModel
+    let onboardingViewModel: OnboardingViewModel
+
+    /// Drives the menubar UI. Hydrated from `CredentialStore` at init so a
+    /// returning user goes straight to `TodayView`.
+    enum AuthPhase: Equatable {
+        case unauthenticated
+        case authenticated
+    }
+
+    private(set) var authPhase: AuthPhase
 
     private let usageEventDAO: UsageEventDAO
     private let source: NSWorkspaceSource
     private let collector: UsageCollector
     private let syncClient: SyncClient
+    private let authClient: AuthClient
+    private let credentials: CredentialStore
     let loginItem: LoginItemController
     private let logger = Logger(subsystem: "com.macos-screentime.MacAgent", category: "AppContainer")
 
@@ -23,7 +37,11 @@ final class AppContainer {
     /// lowers data loss on unexpected quit while keeping wakeup pressure low.
     private static let flushInterval: TimeInterval = 60
 
-    private var flushTask: Task<Void, Never>?
+    // nonisolated(unsafe) so `deinit` (which runs nonisolated) can cancel
+    // the Task without an actor hop. `Task.cancel()` is thread-safe; we
+    // only ever assign this property on the main actor, so the unsafe
+    // exception is benign.
+    private nonisolated(unsafe) var flushTask: Task<Void, Never>?
 
     init(baseURL: URL = AppContainer.defaultBaseURL) {
         // swiftlint:disable:next force_try
@@ -37,13 +55,27 @@ final class AppContainer {
             try? dao.insert(event)
             Task { @MainActor in vm.refresh() }
         }
+        let credentials = KeychainCredentialStore()
+        self.credentials = credentials
+        let api = APIClient(baseURL: baseURL, credentials: credentials)
+        authClient = AuthClient(api: api, credentials: credentials)
+        let onboardingVM = OnboardingViewModel(authClient: authClient)
+        onboardingViewModel = onboardingVM
         syncClient = SyncClient(
             baseURL: baseURL,
-            credentials: KeychainCredentialStore(),
+            credentials: credentials,
             dao: dao,
             fingerprint: Self.deviceFingerprint()
         )
         loginItem = LoginItemController.makeDefault()
+
+        // Seed initial auth state from the keychain so a returning user
+        // skips onboarding. A keychain read failure means we can't trust
+        // any cached JWT — treat as unauthenticated and let the user sign
+        // in again.
+        let hasJWT = (try? credentials.readJWT())?.isEmpty == false
+        authPhase = hasJWT ? .authenticated : .unauthenticated
+
         // Launch-at-login is mandatory: re-register on every launch.
         // ensureEnabled() is idempotent. macOS keeps the user's choice
         // authoritative if they disable it via System Settings, so this
@@ -57,6 +89,15 @@ final class AppContainer {
         if currentStatus != .enabled {
             logger.info("login-item status after ensureEnabled: \(String(describing: currentStatus), privacy: .public)")
         }
+
+        onboardingVM.onAuthenticated = { [weak self] _ in
+            guard let self else { return }
+            self.authPhase = .authenticated
+            // Fire an immediate flush so the device registers with the
+            // backend instead of waiting up to one flushInterval.
+            Task { _ = await self.syncClient.flush() }
+        }
+
         startPeriodicFlush()
     }
 
@@ -74,6 +115,19 @@ final class AppContainer {
         default:
             break
         }
+    }
+
+    /// Wipes JWT + device id + device token and flips the menubar UI back
+    /// to `OnboardingView`. The collector keeps running — events recorded
+    /// while signed out remain in `LocalStore` and will sync once the user
+    /// signs in again (the device gets re-registered on the next flush).
+    func signOut() async {
+        do {
+            try await authClient.signOut()
+        } catch {
+            logger.error("sign-out failed: \(error.localizedDescription, privacy: .public)")
+        }
+        authPhase = .unauthenticated
     }
 
     private func startPeriodicFlush() {
